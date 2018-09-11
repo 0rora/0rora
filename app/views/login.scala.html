@@ -1,0 +1,24 @@
+@()
+
+@main("Luxe") {
+  <section class="header">
+    <img src="@routes.Assets.versioned("images/rabbits.svg")" class="shrine-logo"/>
+    <h1>LUXE</h1>
+  </section>
+  <form action="home.html">
+    <div class="mdc-text-field mdc-text-field--box username">
+      <input type="text" class="mdc-text-field__input" id="username-input" name="username">
+      <label class="mdc-floating-label" for="username-input">Username</label>
+      <div class="mdc-line-ripple"></div>
+    </div>
+    <div class="mdc-text-field mdc-text-field--box password">
+      <input type="password" class="mdc-text-field__input" id="password-input" name="password">
+      <label class="mdc-floating-label" for="password-input">Password</label>
+      <div class="mdc-line-ripple"></div>
+    </div>
+    <div class="button-container">
+      <button type="button" class="mdc-button cancel">Cancel</button>
+      <button class="mdc-button mdc-button--raised next">Next</button>
+    </div>
+  </form>
+}
