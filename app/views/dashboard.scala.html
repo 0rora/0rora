@@ -1,0 +1,7 @@
+@(username: String, logoutUrl: Call)(implicit flash: Flash)
+
+@main("Luxe") {
+    <div>Welcome, @username</div>
+    <div><a href="@logoutUrl">logout</a></div>
+}
+
