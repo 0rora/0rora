@@ -1,7 +1,6 @@
-@import controllers.actions.PageSections
 @(form: Form[models.User], postUrl: Call)(implicit request: MessagesRequestHeader, flash: Flash)
 
-@main("Luxe", PageSections(loginForm = true)) {
+@main("Luxe", loginForm = true) {
     <section class="header">
         <img src="@routes.Assets.versioned("images/rabbits.svg")" class="logo"/>
         <h1>LUXE</h1>
