@@ -1,4 +1,4 @@
-@(title: String)(content: Html)(implicit flash: Flash)
+@(title: String, sections: PageSections = PageSections())(content: Html)(implicit flash: Flash)
 
 <!DOCTYPE html>
 <html lang="en">
@@ -13,11 +13,24 @@
         <link rel="stylesheet" media="screen" href="@routes.Assets.versioned("stylesheets/main.css")">
         <link media="screen" href="@routes.Assets.versioned("stylesheets/normalize.min.css")"/>
         <link rel="stylesheet" media="screen" href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700">
+        <link rel="stylesheet" media="screen" href="https://fonts.googleapis.com/icon?family=Material+Icons">
 
         <link rel="icon" sizes="192x192" href="@routes.Assets.versioned("images/favicon.png")">
         <link rel="shortcut icon" type="image/png" href="@routes.Assets.versioned("images/favicon.png")">
     </head>
     <body>
+
+        @if(sections.topBar) {
+            <header class="mdc-top-app-bar mdc-top-app-bar--fixed">
+                <div class="mdc-top-app-bar__row">
+                    <section class="mdc-top-app-bar__section mdc-top-app-bar__section--align-start">
+                        <a href="#" class="material-icons mdc-top-app-bar__navigation-icon">menu</a>
+                        <span class="mdc-top-app-bar__title">@title</span>
+                    </section>
+                </div>
+            </header>
+        }
+
         @content
 
         <script src="@routes.Assets.versioned("javascripts/material-components-web.min.js")" type="text/javascript"></script>
@@ -31,7 +44,10 @@
                     <button type="button" class="mdc-snackbar__action-button"></button>
                 </div>
             </div>
-            <script>snackattack('@msg')</script>
+            <script>snackattack('@msg');</script>
         }
+
+        @if(sections.loginForm) { <script>loginForm();</script> }
+        @if(sections.topBar) { <script>topAppBar();</script> }
     </body>
 </html>
