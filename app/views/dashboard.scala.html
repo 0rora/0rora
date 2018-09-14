@@ -1,10 +1,7 @@
+@import controllers.actions.PageSections
 @(username: String, logoutUrl: Call)(implicit flash: Flash)
 
-@main("Luxe", PageSections(topBar = true)) {
-
-    @for(_ <- 1 to 50) {
-        ø<br/>
-    }
+@main("Luxe", PageSections(topBar = true, logoutUrl = Some(logoutUrl))) {
 
     <div>Welcome, @username</div>
     <div><a href="@logoutUrl">logout</a></div>

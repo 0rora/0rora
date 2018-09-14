@@ -1,3 +1,4 @@
+@import controllers.actions.PageSections
 @(form: Form[models.User], postUrl: Call)(implicit request: MessagesRequestHeader, flash: Flash)
 
 @main("Luxe", PageSections(loginForm = true)) {
