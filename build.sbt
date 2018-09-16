@@ -17,21 +17,3 @@ libraryDependencies ++= Seq(
 
 // Adds additional packages into conf/routes
 // play.sbt.routes.RoutesKeys.routesImport += "io.github.lux-app.binders._"
-
-
-imageNames in docker := Seq(
-  ImageName(s"luxe-app/lux:${git.gitHeadCommit.value.get}"),
-  ImageName(s"luxe-app/lux:latest")
-)
-
-/*
-dockerfile in docker := {
-  val artifact = (assemblyOutputPath in assembly).value
-  val artifactTargetPath = "/app/server.jar"
-  new Dockerfile {
-    from("openjdk:8-jre-alpine")
-    maintainer("Jem Mawson", "jem.mawson@gmail.com")
-    add(artifact, artifactTargetPath)
-    entryPoint("java", "-jar", artifactTargetPath)
-  }
-}*/
