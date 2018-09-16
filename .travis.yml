@@ -18,7 +18,7 @@ cache:
 deploy:
   skip_cleanup: true
   provider: script
-  script: bash build/docker_push.sh
+  script: bash build/docker.sh
   on:
     branch: master
     tags: true
