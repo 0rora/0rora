@@ -2,7 +2,7 @@
 
 echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
 sbt dist
-docker build
+docker build \
     -f build/Dockerfile \
     -t luxe-app/luxe:latest luxe-app/luxe:$TRAVIS_TAG \
     .
