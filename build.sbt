@@ -9,9 +9,6 @@ scalaVersion := "2.12.6"
 
 libraryDependencies ++= Seq(
   guice,
-//  "org.webjars" % "bootstrap" % "4.1.3",
-
-//  "org.webjars.npm" % "material-components-web" % "0.39.1",
   "org.scalatestplus.play" %% "scalatestplus-play" % "3.1.2" % Test
 )
 

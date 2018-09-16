@@ -1,6 +1,9 @@
 language: scala
 scala:
-    - 2.12.6
+  - 2.12.6
+
+services:
+  - docker
 
 before_cache:
   - find $HOME/.ivy2 -name "ivydata-*.properties" -delete
@@ -11,3 +14,12 @@ cache:
   - "$HOME/.ivy2/cache"
   - "$HOME/.sbt/boot/"
   - "$HOME/.sbt/launchers/"
+
+deploy:
+  skip_cleanup: true
+  provider: script
+  script: bash build/docker_push.sh
+  on:
+    branch: master
+    tags: true
+    condition: $TRAVIS_PULL_REQUEST = false
