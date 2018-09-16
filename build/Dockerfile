@@ -1,4 +1,4 @@
-FROM openjdk:10-jre-slim
+FROM openjdk:11-jre-slim
 
 COPY  target/universal/luxe-1.0-SNAPSHOT.zip /tmp
 RUN mkdir /app && \
