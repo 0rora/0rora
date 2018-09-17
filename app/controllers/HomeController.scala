@@ -1,14 +1,9 @@
 package controllers
 
-import akka.actor.ActorSystem
 import javax.inject._
-import models.Global
-import models.Global.SESSION_USERNAME_KEY
 import models.repo.UserRepo
-import play.api.libs.concurrent.CustomExecutionContext
+import play.api.Configuration
 import play.api.mvc._
-
-import scala.concurrent.{ExecutionContext, Future}
 
 //trait LuxEC extends ExecutionContext
 //
