@@ -1,6 +1,6 @@
 FROM openjdk:11-jre-slim
 
-ENV PLAY_SECRET=changeme
+ENV APPLICATION_SECRET=changeme
 ENV LUXE_ACCOUNT_SEED=changeme
 
 COPY  target/universal/luxe-1.0-SNAPSHOT.zip /tmp
@@ -9,4 +9,4 @@ RUN mkdir /app && \
     (cd /tmp/luxe-1.0-SNAPSHOT/ && mv * /app) && \
     rm -r /app/share
 EXPOSE 9000
-CMD ["sh", "-c", "/app/bin/luxe -Dplay.http.secret.key=${PLAY_SECRET} -Dluxe.account.secret=${LUXE_ACCOUNT_SEED}"]
+CMD ["sh", "-c", "/app/bin/luxe -DAPPLICATION_SECRET=${APPLICATION_SECRET} -DLUXE_ACCOUNT_SEED=${LUXE_ACCOUNT_SEED}"]
