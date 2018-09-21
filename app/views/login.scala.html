@@ -1,27 +1,62 @@
 @(form: Form[models.User], postUrl: Call)(implicit request: MessagesRequestHeader, flash: Flash)
 
-@main("Luxe", loginForm = true) {
-    <section class="header">
-        <img src="@routes.Assets.versioned("images/rabbits.svg")" class="logo"/>
-        <h1>LUXE</h1>
-    </section>
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="x-ua-compatible" content="ie=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
 
-    @helper.form(postUrl, 'id -> "login-form") {
-        @helper.CSRF.formField
+        <title>Luxe</title>
 
-        <div class="mdc-text-field mdc-text-field--box username">
-            <input type="text" class="mdc-text-field__input" id="username-input" name="username">
-            <label class="mdc-floating-label" for="username-input">Username</label>
-            <div class="mdc-line-ripple"></div>
-        </div>
-        <div class="mdc-text-field mdc-text-field--box password">
-            <input type="password" class="mdc-text-field__input" id="password-input" name="password">
-            <label class="mdc-floating-label" for="password-input">Password</label>
-            <div class="mdc-line-ripple"></div>
-        </div>
-        <div class="button-container">
-            <button type="button" class="mdc-button cancel">Cancel</button>
-            <button class="mdc-button mdc-button--raised next">Next</button>
-        </div>
-    }
-}
+        <link rel="stylesheet" media="screen" href="@routes.Assets.versioned("stylesheets/material-components-web.min.css")"/>
+        <link rel="stylesheet" media="screen" href="@routes.Assets.versioned("stylesheets/main.css")">
+        <link media="screen" href="@routes.Assets.versioned("stylesheets/normalize.min.css")"/>
+        <link rel="stylesheet" media="screen" href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700">
+        <link rel="stylesheet" media="screen" href="https://fonts.googleapis.com/icon?family=Material+Icons">
+
+        <link rel="icon" sizes="192x192" href="@routes.Assets.versioned("images/favicon.png")">
+        <link rel="shortcut icon" type="image/png" href="@routes.Assets.versioned("images/favicon.png")">
+    </head>
+    <body>
+        <script src="@routes.Assets.versioned("javascripts/material-components-web.min.js")" type="text/javascript"></script>
+        <script src="@routes.Assets.versioned("javascripts/main.js")" type="text/javascript"></script>
+        <script>mdc.autoInit()</script>
+
+        <section class="header">
+            <img src="@routes.Assets.versioned("images/rabbits.svg")" class="logo"/>
+            <h1>LUXE</h1>
+        </section>
+
+        @helper.form(postUrl, 'id -> "login-form") {
+            @helper.CSRF.formField
+
+            <div class="mdc-text-field mdc-text-field--box username">
+                <input type="text" class="mdc-text-field__input" id="username-input" name="username">
+                <label class="mdc-floating-label" for="username-input">Username</label>
+                <div class="mdc-line-ripple"></div>
+            </div>
+            <div class="mdc-text-field mdc-text-field--box password">
+                <input type="password" class="mdc-text-field__input" id="password-input" name="password">
+                <label class="mdc-floating-label" for="password-input">Password</label>
+                <div class="mdc-line-ripple"></div>
+            </div>
+            <div class="button-container">
+                <button type="button" class="mdc-button cancel">Cancel</button>
+                <button class="mdc-button mdc-button--raised next">Next</button>
+            </div>
+        }
+
+        @flash.get("info").map { msg =>
+            <div class="mdc-snackbar" aria-live="assertive" aria-atomic="true" aria-hidden="true">
+                <div class="mdc-snackbar__text"></div>
+                <div class="mdc-snackbar__action-wrapper">
+                    <button type="button" class="mdc-snackbar__action-button"></button>
+                </div>
+            </div>
+            <script>snackattack('@msg');</script>
+        }
+
+        <script>loginForm();</script>
+    </body>
+</html>

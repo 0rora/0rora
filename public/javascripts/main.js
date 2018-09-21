@@ -17,3 +17,7 @@ function snackattack(message) {
     new mdc.snackbar.MDCSnackbar(document.querySelector('.mdc-snackbar'))
         .show({ message: message, actionText: 'OK', actionHandler: function () {} });
 }
+
+function drawer() {
+    mdc.drawer.MDCDrawer.attachTo(document.querySelector('.mdc-drawer'));
+}
