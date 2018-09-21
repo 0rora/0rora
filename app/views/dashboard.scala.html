@@ -1,6 +1,6 @@
 @(username: String, logoutUrl: Call)(implicit flash: Flash)
 
-@main("Luxe", topBar = TopBar(logoutUrl), drawer = Drawer(logoutUrl)) {
+@main("Sources > CSV", username, topBar = TopBar(logoutUrl), drawer = Drawer(logoutUrl)) {
 
     <h1>Hello</h1>
 
