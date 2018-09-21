@@ -43,3 +43,15 @@ body {
 .button-container button {
     margin: 3px;
 }
+
+/* CSV upload card */
+.csv-card { width: 350px; margin: 48px 0; }
+.csv-card__primary { padding: 1rem; }
+.csv-card__secondary { padding: 0 1rem 8px; }
+.csv-card__title { margin: 0; }
+.csv-card__subtitle { margin: 0; }
+
+.csv-upload-media {
+    background-image:url("/assets/images/upload.svg");
+    background-color: #442b2d;
+}

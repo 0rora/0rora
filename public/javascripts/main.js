@@ -19,5 +19,6 @@ function snackattack(message) {
 }
 
 function drawer() {
-    mdc.drawer.MDCDrawer.attachTo(document.querySelector('.mdc-drawer'));
+    var list = mdc.list.MDCList.attachTo(document.querySelector('.mdc-list'));
+    list.wrapFocus = true;
 }

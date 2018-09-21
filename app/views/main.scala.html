@@ -13,9 +13,10 @@
         <title>@title</title>
 
         <link rel="stylesheet" media="screen" href="@routes.Assets.versioned("stylesheets/material-components-web.min.css")"/>
-        <link rel="stylesheet" media="screen" href="@routes.Assets.versioned("stylesheets/main.css")">
-        <link rel="stylesheet" media="screen" href="@routes.Assets.versioned("stylesheets/drawer.css")">
+        <link rel="stylesheet" media="screen" href="@routes.Assets.versioned("stylesheets/main.css")"/>
+        <link rel="stylesheet" media="screen" href="@routes.Assets.versioned("stylesheets/drawer.css")"/>
         <link media="screen" href="@routes.Assets.versioned("stylesheets/normalize.min.css")"/>
+
         <link rel="stylesheet" media="screen" href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700">
         <link rel="stylesheet" media="screen" href="https://fonts.googleapis.com/icon?family=Material+Icons">
 
@@ -78,6 +79,7 @@
             <script>snackattack('@msg');</script>
         }
 
+        <!-- todo - a seq of things that have 'script' methods -->
         @topBar.script
         @drawer.script
     </body>

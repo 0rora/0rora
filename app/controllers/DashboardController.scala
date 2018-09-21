@@ -15,9 +15,7 @@ class DashboardController @Inject()(
                                      authenticatedUserAction: AuthenticatedUserAction
                                    ) extends MessagesAbstractController(cc) {
   def dashboard() = authenticatedUserAction { implicit req =>
-    req.session.get(SESSION_USERNAME_KEY) match {
-      case Some(username) => Ok(views.html.dashboard(username, routes.LoggedInController.logout()))
-      case None => Ok("Huh?")
-    }
+    val username = req.session(SESSION_USERNAME_KEY)
+    Ok(views.html.dashboard(Seq("Sources", "CSV"), username, routes.LoggedInController.logout()))
   }
 }
