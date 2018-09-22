@@ -26,17 +26,20 @@
     <body>
         <script src="@routes.Assets.versioned("javascripts/material-components-web.min.js")" type="text/javascript"></script>
         <script src="@routes.Assets.versioned("javascripts/main.js")" type="text/javascript"></script>
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
         <script>mdc.autoInit()</script>
 
         <div id="root">
             <div class="drawer-frame-root">
-                <aside class="mdc-drawer">
+                @* permanent *@
+@*
+                <aside class="mdc-drawer mdc-drawer--permanent">
                     <div class="mdc-drawer__header">
                         <h3 class="mdc-drawer__title">Luxe</h3>
                         <h6 class="mdc-drawer__subtitle">@username</h6>
                     </div>
                     <div class="mdc-drawer__content">
-                        <nav class="mdc-list">
+                        <nav class="mdc-list--permanent">
 
                             <hr class="mdc-list-divider">
                             <h6 class="mdc-list-group__subheader">Sources</h6>
@@ -51,10 +54,38 @@
                         </nav>
                     </div>
                 </aside>
+*@
+
+                @* modal *@
+                <aside class="mdc-drawer mdc-drawer--modal">
+                    <div class="mdc-drawer__header">
+                        <h3 class="mdc-drawer__title">Luxe</h3>
+                        <h6 class="mdc-drawer__subtitle">@username</h6>
+                    </div>
+                    <div class="mdc-drawer__content">
+                        <nav class="mdc-list">
+                            <hr class="mdc-list-divider">
+                            <h6 class="mdc-list-group__subheader">Sources</h6>
+                            <a class="mdc-list-item mdc-list-item--activated" href="#" aria-selected="true">
+                                <i class="material-icons mdc-list-item__graphic" aria-hidden="true">file_copy</i>CSV
+                            </a>
+
+                            <hr class="mdc-list-divider">
+                            <a class="mdc-list-item" href="@drawer.logout">
+                                <i class="logout-icon mdc-list-item__graphic" aria-hidden="true"></i>Logout
+                            </a>
+                        </nav>
+                    </div>
+                </aside>
+
+                @* protects main content from interactions whilst modal is open *@
+                <div class="mdc-drawer-scrim"></div>
+
                 <div class="drawer-frame-app-content">
-                    <header class="mdc-top-app-bar mdc-top-app-bar--fixed">
+                    <header class="mdc-top-app-bar">
                         <div class="mdc-top-app-bar__row">
                             <section class="mdc-top-app-bar__section mdc-top-app-bar__section--align-start">
+                                <button class="material-icons mdc-top-app-bar__navigation-icon mdc-ripple-upgraded--unbounded mdc-ripple-upgraded">menu</button>
                                 <span class="mdc-top-app-bar__title">@title</span>
                             </section>
                         </div>
@@ -79,8 +110,5 @@
             <script>snackattack('@msg');</script>
         }
 
-        <!-- todo - a seq of things that have 'script' methods -->
-        @topBar.script
-        @drawer.script
     </body>
 </html>
