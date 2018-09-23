@@ -69,9 +69,9 @@ function enableFileDragAndDrop() {
         e.preventDefault();
         e.stopPropagation();
     }).on('dragenter', function() {
-        $form.addClass('is-dragover'); // todo - to be defined
+        $form.addClass('is-dragover');
     }).on('dragleave dragend drop', function() {
-        $form.removeClass('is-dragover'); // todo - to be defined
+        $form.removeClass('is-dragover');
     }).on('drop', function(e) {
         droppedFiles = e.originalEvent.dataTransfer.files;
         $form.trigger('submit');
@@ -83,7 +83,6 @@ function enableFileDragAndDrop() {
         $media.addClass('csv-is-uploading');
         e.preventDefault();
         const ajaxData = new FormData($form.get(0));
-        // todo - support more than 1 file at a time
         if (droppedFiles) {
             $.each(droppedFiles, function(i, file) { ajaxData.set('csv_file', file); });
         }
@@ -101,7 +100,7 @@ function enableFileDragAndDrop() {
                 $('.csv-upload-input').val("");
             },
             success: function(data) {
-                $media.addClass(data.success ? 'is-success' : 'is-error' ); // todo
+                $media.addClass(data.success ? 'is-success' : 'is-error' );
                 console.log("data: ", data);
                 if (!data.success) {
                     console.log("data.error: ", data.error);

@@ -11,7 +11,6 @@ import scala.collection.JavaConverters._
 
 class SourcesController @Inject()(cc: MessagesControllerComponents) extends MessagesAbstractController(cc) {
 
-  // todo - support gz, zip, tar.gz
   def uploadCSV: Action[Files.TemporaryFile] = Action(parse.temporaryFile) { request =>
     val path = request.body.path
     FS.lines(path, Charset.forName("UTF-8")).iterator().asScala.foreach(println)
