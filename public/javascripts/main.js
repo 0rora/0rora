@@ -58,21 +58,21 @@ function changedMedia() {
 let droppedFiles = false;
 function enableFileDragAndDrop() {
     if (!document.querySelector('#upload-form')) return;
+
     let $form = $('#upload-form');
-    console.log("enable d&d");
+    $('#csv-upload-button').click(function () { $(".csv-upload-input").trigger("click"); });
+    $('#csv-upload-card').click(function () { $(".csv-upload-input").trigger("click"); });
+    $('.csv-upload-input').change(function () { $form.trigger('submit'); });
+
     $form.on('drag dragstart dragend dragover dragenter dragleave drop', function(e) {
         e.preventDefault();
         e.stopPropagation();
     }).on('dragenter', function() {
         $form.addClass('is-dragover'); // todo - to be defined
-        console.log("enter");
     }).on('dragleave dragend drop', function() {
         $form.removeClass('is-dragover'); // todo - to be defined
-        console.log("leave");
     }).on('drop', function(e) {
-        console.log("dropping");
         droppedFiles = e.originalEvent.dataTransfer.files;
-        console.log(droppedFiles);
         $form.trigger('submit');
     });
 
@@ -82,11 +82,9 @@ function enableFileDragAndDrop() {
         $form.addClass('is-uploading');
         e.preventDefault();
         const ajaxData = new FormData($form.get(0));
+        // todo - support more than 1 file at a time
         if (droppedFiles) {
-            $.each(droppedFiles, function(i, file) {
-                console.log("pushing file ", file);
-                ajaxData.append($form.find('input[type="file"]').attr('name'), file);
-            });
+            $.each(droppedFiles, function(i, file) { ajaxData.set('csv_file', file); });
         }
         $.ajax({
             url: $form.attr('action'),
@@ -98,15 +96,19 @@ function enableFileDragAndDrop() {
             processData: false,
             complete: function() {
                 $form.removeClass('is-uploading');
+                droppedFiles = false;
+                $('.csv-upload-input').val("");
             },
             success: function(data) {
                 $form.addClass(data.success ? 'is-success' : 'is-error' );
+                console.log("data: ", data);
                 if (!data.success) {
+                    console.log("data.error: ", data.error);
                     console.log(data.error);
                 }
             },
-            error: function() {
-                console.log("error?");
+            error: function(xhr) {
+                console.log("xhr: ", xhr);
             }
         });
     });

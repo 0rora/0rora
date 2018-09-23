@@ -55,3 +55,8 @@ body {
     background-image:url("/assets/images/upload.svg");
     background-color: #442b2d;
 }
+.csv-upload-input {
+    position: absolute;
+    left: 0;
+    opacity: 0;
+}
