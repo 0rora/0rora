@@ -10,6 +10,7 @@ GET     /dashboard                  controllers.DashboardController.dashboard
 # Map static resources from the /public folder to the /assets URL path
 GET     /assets/*file               controllers.Assets.versioned(path="/public", file: Asset)
 
+POST    /sources/csv                controllers.SourcesController.uploadCSV
 
 POST    /doLogin                    controllers.UserController.processLoginAttempt
 GET     /logout                     controllers.LoggedInController.logout

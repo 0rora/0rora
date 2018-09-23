@@ -1,24 +1,27 @@
-@(crumbs: Seq[String], username: String, logoutUrl: Call)(implicit flash: Flash)
+@(crumbs: Seq[String], username: String, logoutUrl: Call)(implicit request: RequestHeader, flash: Flash)
 
 @main(crumbs.mkString(" > "), username, topBar = TopBar(logoutUrl), drawer = Drawer(logoutUrl)) {
 
-    <div class="mdc-card csv-card">
-        <div class="mdc-card__primary-action mdc-ripple-upgraded" tabindex="0">
-            <div class="mdc-card__media mdc-card__media--16-9 demo-card__media csv-upload-media"></div>
-            <div class="csv-card__primary">
-                <h2 class="csv-card__title mdc-typography--headline6">Upload CSV</h2>
+    @helper.form(action = routes.SourcesController.uploadCSV, 'enctype -> "multipart/form-data", 'id -> "upload-form") {
+        @helper.CSRF.formField
+        <div class="mdc-card csv-card">
+            <div class="mdc-card__primary-action mdc-ripple-upgraded" tabindex="0">
+                <div class="mdc-card__media mdc-card__media--16-9 demo-card__media csv-upload-media"></div>
+                <div class="csv-card__primary">
+                    <h2 class="csv-card__title mdc-typography--headline6">Upload CSV</h2>
+                </div>
+                <div class="csv-card__secondary mdc-typography--body2">
+                    Drag and drop, or select below.<br/>
+                    Payments will be processed immediately.
+                </div>
             </div>
-            <div class="csv-card__secondary mdc-typography--body2">
-                Drag and drop, or select below.<br/>
-                Payments will be processed immediately.
+            <div class="mdc-card__actions">
+                <div class="mdc-card__action-icons">
+                    <button class="mdc-icon-button material-icons mdc-card__action mdc-card__action--icon mdc-ripple-upgraded--unbounded mdc-ripple-upgraded" title="Share" data-mdc-ripple-is-unbounded="true">cloud_upload</button>
+                </div>
             </div>
         </div>
-        <div class="mdc-card__actions">
-            <div class="mdc-card__action-icons">
-                <button class="mdc-icon-button material-icons mdc-card__action mdc-card__action--icon mdc-ripple-upgraded--unbounded mdc-ripple-upgraded" title="Share" data-mdc-ripple-is-unbounded="true">cloud_upload</button>
-            </div>
-        </div>
-    </div>
+    }
 
 }
 
