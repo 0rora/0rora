@@ -50,13 +50,15 @@ body {
 .csv-card__secondary { padding: 0 1rem 8px; }
 .csv-card__title { margin: 0; }
 .csv-card__subtitle { margin: 0; }
-
 .csv-upload-media {
     background-image:url("/assets/images/upload.svg");
     background-color: #442b2d;
+    -webkit-transition: background-color 1s ease;
+    transition: background-color 1s ease;
 }
-.csv-upload-input {
-    position: absolute;
-    left: 0;
-    opacity: 0;
+.csv-upload-input { position: absolute; left: 0; opacity: 0; }
+.csv-is-uploading {
+    background-color: #fcb8ab;
+    -webkit-transition: background-color 1s ease;
+    transition: background-color 1s ease;
 }
