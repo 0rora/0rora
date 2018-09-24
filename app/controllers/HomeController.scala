@@ -5,11 +5,6 @@ import models.repo.UserRepo
 import play.api.Configuration
 import play.api.mvc._
 
-//trait LuxEC extends ExecutionContext
-//
-//class LuxExecutionContext @Inject()(system: ActorSystem) extends CustomExecutionContext(system, "lux-ec") with LuxEC
-
-
 /**
  * This controller creates an `Action` to handle HTTP requests to the
  * application's home page.

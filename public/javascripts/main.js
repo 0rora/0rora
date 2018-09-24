@@ -103,8 +103,7 @@ function enableFileDragAndDrop() {
                 $media.addClass(data.success ? 'is-success' : 'is-error' );
                 console.log("data: ", data);
                 if (!data.success) {
-                    console.log("data.error: ", data.error);
-                    console.log(data.error);
+                    console.log(data.msg);
                 }
             },
             error: function(xhr) {

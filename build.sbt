@@ -9,6 +9,8 @@ scalaVersion := "2.12.6"
 
 libraryDependencies ++= Seq(
   guice,
+  "io.github.synesso" %% "scala-stellar-sdk" % "0.3.2",
+  "com.nrinaudo" %% "kantan.csv-generic" % "0.4.0",
   "org.scalatestplus.play" %% "scalatestplus-play" % "3.1.2" % Test
 )
 
