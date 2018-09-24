@@ -7,12 +7,13 @@ import controllers.flows.PaymentFlow
 import javax.inject.Inject
 import kantan.csv.ops._
 import kantan.csv.{rfc, _}
+import play.api.Configuration
 import play.api.libs.Files
 import play.api.mvc._
 import stellar.sdk.op.PaymentOperation
 import stellar.sdk.{Amount, Asset, KeyPair, NativeAmount}
 
-class SourcesController @Inject()(cc: MessagesControllerComponents, implicit val system: ActorSystem) extends MessagesAbstractController(cc) {
+class SourcesController @Inject()(cc: MessagesControllerComponents, config: Configuration, implicit val system: ActorSystem) extends MessagesAbstractController(cc) {
 
   implicit private val mat: ActorMaterializer = ActorMaterializer()
   implicit private val paymentDecoder: RowDecoder[PaymentOperation] = RowDecoder.ordered {
@@ -32,7 +33,7 @@ class SourcesController @Inject()(cc: MessagesControllerComponents, implicit val
     val path = request.body.files.head.ref.path
     def iter = path.asCsvReader[PaymentOperation](rfc.withoutHeader).collect { case Right(op) => op }.toIterator
       Source.fromIterator(() => iter)
-        .to(PaymentFlow.sink)
+        .to(PaymentFlow(config).sink)
         .run()
       Ok("""{"msg":"File processing","success":true}""")
   }
