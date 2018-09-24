@@ -1,17 +1,15 @@
 package controllers.flows
 
 import akka.NotUsed
-import akka.actor.{ActorRef, ActorSystem}
-import akka.stream.ActorMaterializer
-import akka.stream.scaladsl.{Flow, Sink, Source}
+import akka.stream.scaladsl.{Flow, Sink}
 import stellar.sdk.op.PaymentOperation
-import stellar.sdk.resp.TransactionPostResp
+
+import scala.concurrent.duration._
 
 object PaymentFlow {
 
-//  implicit val system: ActorSystem = ActorSystem("payment-flow")
-//  implicit val mat: ActorMaterializer = ActorMaterializer()
-
-  val sink: Sink[PaymentOperation, NotUsed] = Flow[PaymentOperation].to(Sink.foreach(println))
+  val sink: Sink[PaymentOperation, NotUsed] = Flow[PaymentOperation]
+    .groupedWithin(100, 1.second)
+    .to(Sink.foreach(println))
 
 }
