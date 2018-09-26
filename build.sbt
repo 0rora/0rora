@@ -8,9 +8,10 @@ lazy val root = (project in file(".")).enablePlugins(PlayScala)
 scalaVersion := "2.12.6"
 
 libraryDependencies ++= Seq(
-  guice,
+  guice, evolutions, jdbc,
   "io.github.synesso" %% "scala-stellar-sdk" % "0.3.2",
   "com.nrinaudo" %% "kantan.csv-generic" % "0.4.0",
+  "org.postgresql" % "postgresql" % "42.2.5",
   "org.scalatestplus.play" %% "scalatestplus-play" % "3.1.2" % Test
 )
 
