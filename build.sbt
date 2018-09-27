@@ -12,6 +12,9 @@ libraryDependencies ++= Seq(
   "io.github.synesso" %% "scala-stellar-sdk" % "0.3.2",
   "com.nrinaudo" %% "kantan.csv-generic" % "0.4.0",
   "org.postgresql" % "postgresql" % "42.2.5",
+  "org.scalikejdbc" %% "scalikejdbc" % "3.3.0",
+  "org.scalikejdbc" %% "scalikejdbc-config" % "3.3.0",
+  "org.scalikejdbc" %% "scalikejdbc-play-initializer" % "2.6.0-scalikejdbc-3.3",
   "org.scalatestplus.play" %% "scalatestplus-play" % "3.1.2" % Test
 )
 
