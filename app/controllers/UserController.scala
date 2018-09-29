@@ -17,7 +17,7 @@ class UserController @Inject()(cc: MessagesControllerComponents, userRepo: UserR
       },
       success = { user: User =>
         if (userRepo.lookupUser(user)) {
-          Redirect(routes.DashboardController.dashboard())
+          Redirect(routes.PaymentsListController.dashboard())
             .flashing("info" -> s"Welcome, ${user.username}.")
             .withSession(SESSION_USERNAME_KEY -> user.username)
         } else {

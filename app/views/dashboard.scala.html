@@ -1,6 +1,6 @@
-@(crumbs: Seq[String], username: String, logoutUrl: Call)(implicit request: RequestHeader, flash: Flash)
+@(crumbs: Seq[String], username: String)(implicit request: RequestHeader, flash: Flash)
 
-@main(crumbs.mkString(" > "), username, topBar = TopBar(logoutUrl), drawer = Drawer(logoutUrl)) {
+@main(crumbs.mkString(" > "), username) {
 
     @helper.form(action = routes.SourcesController.uploadCSV, 'enctype -> "multipart/form-data", 'id -> "upload-form") {
         @helper.CSRF.formField

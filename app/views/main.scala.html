@@ -1,7 +1,20 @@
-@(title: String,
-        username: String,
-        topBar: TopBar,
-        drawer: Drawer)(content: Html)(implicit flash: Flash)
+@(title: String, username: String)(content: Html)(implicit flash: Flash)
+
+@menu_drawer_content = {
+        <hr class="mdc-list-divider"/>
+        <a class="mdc-list-item mdc-list-item--activated" href="#" aria-selected="true">
+            <i class="material-icons mdc-list-item__graphic" aria-hidden="true">compare_arrows</i>Payments
+        </a>
+        <hr class="mdc-list-divider"/>
+        <h6 class="mdc-list-group__subheader">Sources</h6>
+        <a class="mdc-list-item" href="#">
+            <i class="material-icons mdc-list-item__graphic" aria-hidden="true">file_copy</i>Upload CSV
+        </a>
+        <hr class="mdc-list-divider"/>
+        <a class="mdc-list-item" href="@routes.LoggedInController.logout">
+            <i class="logout-icon mdc-list-item__graphic" aria-hidden="true"></i>Logout
+        </a>
+}
 
 <!DOCTYPE html>
 <html lang="en">
@@ -38,19 +51,7 @@
                         <h6 class="mdc-drawer__subtitle">@username</h6>
                     </div>
                     <div class="mdc-drawer__content">
-                        <nav class="mdc-list--permanent">
-
-                            <hr class="mdc-list-divider">
-                            <h6 class="mdc-list-group__subheader">Sources</h6>
-                            <a class="mdc-list-item mdc-list-item--activated" href="#" aria-selected="true">
-                                <i class="material-icons mdc-list-item__graphic" aria-hidden="true">file_copy</i>CSV
-                            </a>
-
-                            <hr class="mdc-list-divider">
-                            <a class="mdc-list-item" href="@drawer.logout">
-                                <i class="logout-icon mdc-list-item__graphic" aria-hidden="true"></i>Logout
-                            </a>
-                        </nav>
+                        <nav class="mdc-list--permanent">@menu_drawer_content</nav>
                     </div>
                 </aside>
 
@@ -61,18 +62,7 @@
                         <h6 class="mdc-drawer__subtitle">@username</h6>
                     </div>
                     <div class="mdc-drawer__content">
-                        <nav class="mdc-list">
-                            <hr class="mdc-list-divider">
-                            <h6 class="mdc-list-group__subheader">Sources</h6>
-                            <a class="mdc-list-item mdc-list-item--activated" href="#" aria-selected="true">
-                                <i class="material-icons mdc-list-item__graphic" aria-hidden="true">file_copy</i>CSV
-                            </a>
-
-                            <hr class="mdc-list-divider">
-                            <a class="mdc-list-item" href="@drawer.logout">
-                                <i class="logout-icon mdc-list-item__graphic" aria-hidden="true"></i>Logout
-                            </a>
-                        </nav>
+                        <nav class="mdc-list">@menu_drawer_content</nav>
                     </div>
                 </aside>
 
