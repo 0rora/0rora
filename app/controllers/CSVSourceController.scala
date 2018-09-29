@@ -12,7 +12,7 @@ class CSVSourceController @Inject()(cc: MessagesControllerComponents,
 
   def dashboard() = authenticatedUserAction { implicit req =>
     val username = req.session(SESSION_USERNAME_KEY)
-    Ok(views.html.dashboard(Seq("Sources", "CSV"), username))
+    Ok(views.html.sources.csv(username))
   }
 
 }

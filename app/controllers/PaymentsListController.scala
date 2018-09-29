@@ -11,6 +11,6 @@ class PaymentsListController @Inject()(cc: MessagesControllerComponents,
 
   def dashboard() = authenticatedUserAction { implicit req =>
     val username = req.session(SESSION_USERNAME_KEY)
-    Ok(views.html.dashboard(Seq("Payments"), username))
+    Ok(views.html.payments(username))
   }
 }

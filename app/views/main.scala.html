@@ -2,12 +2,12 @@
 
 @menu_drawer_content = {
         <hr class="mdc-list-divider"/>
-        <a class="mdc-list-item mdc-list-item--activated" href="#" aria-selected="true">
+        <a class="mdc-list-item mdc-list-item--activated" href="@routes.PaymentsListController.dashboard" aria-selected="true">
             <i class="material-icons mdc-list-item__graphic" aria-hidden="true">compare_arrows</i>Payments
         </a>
         <hr class="mdc-list-divider"/>
         <h6 class="mdc-list-group__subheader">Sources</h6>
-        <a class="mdc-list-item" href="#">
+        <a class="mdc-list-item" href="@routes.CSVSourceController.dashboard">
             <i class="material-icons mdc-list-item__graphic" aria-hidden="true">file_copy</i>Upload CSV
         </a>
         <hr class="mdc-list-divider"/>
