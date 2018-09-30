@@ -131,9 +131,11 @@ window.onload = function() {
         originalOnload();
     }
     $(window).resize(resized);
-    window.onhashchange = hashChanged;
     topAppBar();
     drawer();
     enableFileDragAndDrop();
-    window.location.hash = "#payments";
+    if ($('#login-form').length === 0) {
+        window.onhashchange = hashChanged;
+        window.location.hash = "#payments";
+    }
 };

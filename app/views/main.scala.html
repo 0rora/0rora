@@ -1,4 +1,4 @@
-@(title: String, username: String)(content: Html)(implicit request: RequestHeader, flash: Flash)
+@(username: String)(implicit request: RequestHeader, flash: Flash)
 
 @menu_drawer_content = {
     <!--suppress HtmlUnknownAnchorTarget -->
@@ -71,7 +71,7 @@
         <meta http-equiv="x-ua-compatible" content="ie=edge">
         <meta name="viewport" content="width=device-width, initial-scale=1">
 
-        <title>@title</title>
+        <title>Luxe</title>
 
         <link rel="stylesheet" media="screen" href="@routes.Assets.versioned("stylesheets/material-components-web.min.css")"/>
         <link rel="stylesheet" media="screen" href="@routes.Assets.versioned("stylesheets/main.css")"/>
@@ -122,7 +122,7 @@
                         <div class="mdc-top-app-bar__row">
                             <section class="mdc-top-app-bar__section mdc-top-app-bar__section--align-start">
                                 <button class="material-icons mdc-top-app-bar__navigation-icon mdc-ripple-upgraded--unbounded mdc-ripple-upgraded">menu</button>
-                                <span class="mdc-top-app-bar__title">@title</span>
+                                <span class="mdc-top-app-bar__title"></span>
                             </section>
                         </div>
                     </header>
