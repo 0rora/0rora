@@ -39,6 +39,12 @@ function drawer() {
     changedMedia();
 }
 
+function paymentsList() {
+    if (!document.querySelector('#payments-list')) return;
+    let listEle = document.getElementById('#payments-list');
+    let list = new mdc.list.MDCList(listEle);
+}
+
 function resized() {
     let smallForm_ = window.matchMedia("(max-width: 767px)").matches;
     if (smallForm !== smallForm_) {
@@ -141,5 +147,6 @@ window.onload = function() {
     if ($('#login-form').length === 0) {
         window.onhashchange = hashChanged;
         window.location.hash = "#payments";
+        hashChanged();
     }
 };
