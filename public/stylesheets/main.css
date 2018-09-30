@@ -45,11 +45,11 @@ body {
 }
 
 .hidden {
-    visibility: hidden;
+    display: none;
 }
 
 /* CSV upload card */
-.csv-card { width: 350px; margin: 48px 0; }
+.csv-card { width: 350px; margin: 0; }
 .csv-card__primary { padding: 1rem; }
 .csv-card__secondary { padding: 0 1rem 8px; }
 .csv-card__title { margin: 0; }
