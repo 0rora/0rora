@@ -113,13 +113,27 @@ function enableFileDragAndDrop() {
     });
 }
 
+var dashboardFocus = null;
+function switchDashboardFocusTo(section) {
+    if (dashboardFocus) dashboardFocus.addClass('hidden');
+    dashboardFocus = $("#section_" + section);
+    dashboardFocus.removeClass('hidden');
+    $('.mdc-top-app-bar__title').text(dashboardFocus.attr('title'));
+}
+
+function hashChanged(e) {
+    switchDashboardFocusTo(window.location.hash.substr(1));
+}
+
 let originalOnload = window.onload;
 window.onload = function() {
     if (originalOnload) {
         originalOnload();
     }
     $(window).resize(resized);
+    window.onhashchange = hashChanged;
     topAppBar();
     drawer();
     enableFileDragAndDrop();
+    window.location.hash = "#payments";
 };

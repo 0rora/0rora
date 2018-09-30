@@ -1,19 +1,67 @@
-@(title: String, username: String)(content: Html)(implicit flash: Flash)
+@(title: String, username: String)(content: Html)(implicit request: RequestHeader, flash: Flash)
 
 @menu_drawer_content = {
-        <hr class="mdc-list-divider"/>
-        <a class="mdc-list-item mdc-list-item--activated" href="@routes.PaymentsListController.dashboard" aria-selected="true">
+    <!--suppress HtmlUnknownAnchorTarget -->
+    <hr class="mdc-list-divider"/>
+        <a class="mdc-list-item mdc-list-item--activated" href="#payments" aria-selected="true">
             <i class="material-icons mdc-list-item__graphic" aria-hidden="true">compare_arrows</i>Payments
         </a>
         <hr class="mdc-list-divider"/>
         <h6 class="mdc-list-group__subheader">Sources</h6>
-        <a class="mdc-list-item" href="@routes.CSVSourceController.dashboard">
+        <a class="mdc-list-item" href="#sources-csv">
             <i class="material-icons mdc-list-item__graphic" aria-hidden="true">file_copy</i>Upload CSV
         </a>
         <hr class="mdc-list-divider"/>
         <a class="mdc-list-item" href="@routes.LoggedInController.logout">
             <i class="logout-icon mdc-list-item__graphic" aria-hidden="true"></i>Logout
         </a>
+}
+
+@dashboard_content = {
+
+    @*
+        payments list
+    *@
+    <section id="section_payments" class="hidden" title="Payments">
+        <h3>Payments List</h3>
+    </section>
+
+    @*
+        sources -> upload CSV
+    *@
+    <section id="section_sources-csv" class="hidden" title="Sources > CSV">
+        @helper.form(action = routes.SourcesController.uploadCSV, 'enctype -> "multipart/form-data", 'id -> "upload-form") {
+            @helper.CSRF.formField
+            <div class="mdc-layout-grid">
+                <div class="mdc-layout-grid__inner">
+                    <div class="mdc-layout-grid__cell--span-3"></div>
+                    <div class="mdc-layout-grid__cell--span-6">
+                        <div class="mdc-card csv-card">
+                            <div id="csv-upload-card" class="mdc-card__primary-action mdc-ripple-upgraded" tabindex="0">
+                                <div class="mdc-card__media mdc-card__media--16-9 demo-card__media csv-upload-media"></div>
+                                <div class="csv-card__primary">
+                                    <h2 class="csv-card__title mdc-typography--headline6">Upload CSV</h2>
+                                </div>
+                                <div class="csv-card__secondary mdc-typography--body2">
+                                    Drag and drop, or click to select.<br/>
+                                    Payments will be processed immediately.
+                                </div>
+                            </div>
+                            <div class="mdc-card__actions">
+                                <div class="mdc-card__action-icons">
+                                    <button id="csv-upload-button" class="mdc-icon-button material-icons mdc-card__action mdc-card__action--icon mdc-ripple-upgraded--unbounded mdc-ripple-upgraded" title="Share" data-mdc-ripple-is-unbounded="true">
+                                        cloud_upload</button>
+                                    <input type="file" name="csv_file" class="csv-upload-input">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+    </section>
+
+
 }
 
 <!DOCTYPE html>
@@ -80,7 +128,7 @@
                     </header>
                     <div class="drawer-main-content">
                         <div class="mdc-top-app-bar--fixed-adjust">
-                            @content
+                            @dashboard_content
                         </div>
                     </div>
                 </div>
