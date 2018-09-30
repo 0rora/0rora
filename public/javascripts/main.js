@@ -55,6 +55,7 @@ function changedMedia() {
     } else {
         $('.mdc-drawer--permanent').show();
         drawerButton.hide();
+        modalDrawer.open = false;
     }
 }
 
