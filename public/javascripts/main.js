@@ -21,6 +21,9 @@ function topAppBar() {
     topAppBar.listen('MDCTopAppBar:nav', () => {
         modalDrawer.open = !modalDrawer.open;
     });
+    document.querySelector(".mdc-list").addEventListener('click', (event) => {
+        modalDrawer.open = false;
+    });
 }
 
 function snackattack(message) {
