@@ -48,6 +48,16 @@ body {
     display: none;
 }
 
+.full-width {
+    width: 100%;
+}
+
+/* Payments List */
+.payments-list-header {
+    padding: 16px;
+    font-weight: bold;
+}
+
 /* CSV upload card */
 .csv-card { width: 350px; margin: 0; }
 .csv-card__primary { padding: 1rem; }
@@ -66,3 +76,4 @@ body {
     -webkit-transition: background-color 1s ease;
     transition: background-color 1s ease;
 }
+
