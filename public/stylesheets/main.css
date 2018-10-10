@@ -54,8 +54,14 @@ body {
 
 /* Payments List */
 .payments-list-header {
-    padding: 16px;
+    padding: 0 16px;
     font-weight: bold;
+}
+
+.payment-list-item {
+    height: 0;
+    padding: 16px;
+    cursor: pointer;
 }
 
 /* CSV upload card */
