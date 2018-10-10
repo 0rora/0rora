@@ -1,22 +1,17 @@
 package models.repo
 
-import java.time.ZonedDateTime
+import java.time.{ZoneId, ZonedDateTime}
 
-import akka.{Done, NotUsed}
+import akka.NotUsed
 import akka.stream.scaladsl.{Flow, Sink}
-import javax.inject.Inject
-import play.api.db.Database
-import scalikejdbc.AutoSession
-import stellar.sdk.PublicKeyOps
-import scalikejdbc._
+import scalikejdbc.{AutoSession, _}
+import stellar.sdk.{KeyPair, PublicKeyOps}
 
-import scala.concurrent.Future
-import scala.concurrent.Await
-import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 
 class PaymentRepo() {
   implicit private val session: AutoSession = AutoSession
+  private val UTC = ZoneId.of("UTC")
 
   val writer: Sink[Payment, NotUsed] = Flow[Payment]
     .groupedWithin(100, 1.second)
@@ -28,9 +23,29 @@ class PaymentRepo() {
     }.to(Sink.foreach { params =>
     sql"""
       insert into payments (source, destination, code, issuer, units, received, scheduled, status)
-      values (?, ?, ?, ?, ?, ?, ?, ?::payment_status)
+      values (?, ?, ?, ?, ?, ?, ?, cast(? as payment_status))
     """.batch(params: _*).apply()
   })
+
+  def list: Seq[Payment] = {
+    sql"""
+       select id, source, destination, code, issuer, units, received, scheduled, status
+       from payments
+       order by scheduled, source, destination
+    """.map{ rs =>
+      Payment(
+        id = rs.longOpt("id"),
+        source = KeyPair.fromAccountId(rs.string("source")),
+        destination = KeyPair.fromAccountId(rs.string("destination")),
+        code = rs.string("code"),
+        issuer = rs.stringOpt("issuer").map(KeyPair.fromAccountId),
+        units = rs.long("units"),
+        received = ZonedDateTime.ofInstant(rs.timestamp("received").toInstant, UTC),
+        scheduled = ZonedDateTime.ofInstant(rs.timestamp("scheduled").toInstant, UTC),
+        status = Payment.status(rs.string("status"))
+      )
+    }.list().apply()
+  }
 }
 
 case class Payment(id: Option[Long],
@@ -44,6 +59,14 @@ case class Payment(id: Option[Long],
                    status: Payment.Status)
 
 object Payment {
+
+  def status(s: String): Status = s match {
+    case "pending" => Pending
+    case "submitted" => Submitted
+    case "failed" => Failed
+    case "succeeded" => Succeeded
+    case _ => throw new Exception(s"Payment status unrecognised: $s")
+  }
 
   sealed trait Status
 
