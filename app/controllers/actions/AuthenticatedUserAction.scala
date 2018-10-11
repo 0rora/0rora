@@ -2,7 +2,7 @@ package controllers.actions
 
 import controllers.routes
 import javax.inject.Inject
-import models.Global.SESSION_USERNAME_KEY
+import models.Global.SessionUsernameKey
 import play.api.mvc.{ActionBuilderImpl, BodyParsers, Request, Result}
 import play.api.mvc.Results.Redirect
 
@@ -15,8 +15,8 @@ class AuthenticatedUserAction @Inject() (parser: BodyParsers.Default)(implicit e
 
   override def invokeBlock[A](request: Request[A], block: Request[A] => Future[Result]): Future[Result] = {
     logger.info("Entered AuthenticatedUserAction.invokeBlock ...")
-    request.session.get(SESSION_USERNAME_KEY).map(_ => block(request)).getOrElse(
-      Future.successful(    Redirect(routes.HomeController.login())
+    request.session.get(SessionUsernameKey).map(_ => block(request)).getOrElse(
+      Future.successful(Redirect(routes.HomeController.login())
         .flashing("info" -> "Please log in.")
         .withNewSession
       )

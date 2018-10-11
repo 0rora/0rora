@@ -1,12 +1,12 @@
 package controllers
 
 import javax.inject.Inject
-import models.Global.SESSION_USERNAME_KEY
+import models.Global.SessionUsernameKey
 import models.User
 import models.repo.UserRepo
 import play.api.data.Form
 import play.api.data.Forms.{mapping, nonEmptyText}
-import play.api.mvc.{AnyContent, MessagesAbstractController, MessagesControllerComponents, MessagesRequest}
+import play.api.mvc._
 
 class UserController @Inject()(cc: MessagesControllerComponents, userRepo: UserRepo) extends MessagesAbstractController(cc) {
 
@@ -19,7 +19,7 @@ class UserController @Inject()(cc: MessagesControllerComponents, userRepo: UserR
         if (userRepo.lookupUser(user)) {
           Redirect(routes.DashboardController.dashboard())
             .flashing("info" -> s"Welcome, ${user.username}.")
-            .withSession(SESSION_USERNAME_KEY -> user.username)
+            .withSession(SessionUsernameKey -> user.username)
         } else {
           Redirect(routes.HomeController.login())
             .flashing("info" -> "Invalid username/password.")

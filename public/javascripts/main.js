@@ -12,7 +12,7 @@ function loginForm() {
     });
 }
 
-var modalDrawer;
+let modalDrawer;
 
 function topAppBar() {
     if (!document.querySelector('.mdc-top-app-bar')) return;
