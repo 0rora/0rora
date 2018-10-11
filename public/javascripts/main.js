@@ -47,32 +47,17 @@ function paymentsList() {
 
 function loadPayments() {
     const template = $('#payment-template').html();
-    const rendered = Mustache.render(template, {
-        payments: [
-            {
-                date: "29 Sep 2018",
-                from: "GBZYOJIDQRZU3RWPQDQ6HFD3ZVYVJST7KSB5TLMSNY2VSEIZMRC5L6IQ",
-                to: "GACZHAQLFECAHDSFDQPCOAD6ITVWR7BUZAIRRUGOAPLECX74O6222A4G",
-                asset: "XLM",
-                units: "100.0"
-            },
-            {
-                date: "29 Sep 2018",
-                from: "GBZYOJIDQRZU3RWPQDQ6HFD3ZVYVJST7KSB5TLMSNY2VSEIZMRC5L6IQ",
-                to: "GACZHAQLFECAHDSFDQPCOAD6ITVWR7BUZAIRRUGOAPLECX74O6222A4G",
-                asset: "XLM",
-                units: "100.0"
-            },
-            {
-                date: "29 Sep 2018",
-                from: "GBZYOJIDQRZU3RWPQDQ6HFD3ZVYVJST7KSB5TLMSNY2VSEIZMRC5L6IQ",
-                to: "GACZHAQLFECAHDSFDQPCOAD6ITVWR7BUZAIRRUGOAPLECX74O6222A4G",
-                asset: "XLM",
-                units: "100.0"
-            },
-        ]
+    $.ajax({
+        url: '/payments',
+        type: 'GET',
+        success: function(data) {
+            const rendered = Mustache.render(template, { payments: data });
+            $('#payments-list').html(rendered);
+        },
+        error: function(xhr) {
+            console.log("xhr: ", xhr);
+        }
     });
-    $('#payments-list').html(rendered);
 }
 
 function resized() {

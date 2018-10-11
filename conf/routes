@@ -10,6 +10,9 @@ GET     /dashboard                  controllers.DashboardController.dashboard
 # Sources
 POST    /sources/csv                controllers.SourcesController.uploadCSV
 
+# Data
+GET     /payments                   controllers.PaymentsController.list
+
 # Authentication
 GET     /logout                     controllers.LoggedInController.logout
 POST    /doLogin                    controllers.UserController.processLoginAttempt

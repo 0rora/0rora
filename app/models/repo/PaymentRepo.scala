@@ -4,12 +4,14 @@ import java.time.{ZoneId, ZonedDateTime}
 
 import akka.NotUsed
 import akka.stream.scaladsl.{Flow, Sink}
+import javax.inject.Inject
 import scalikejdbc.{AutoSession, _}
 import stellar.sdk.{KeyPair, PublicKeyOps}
 
 import scala.concurrent.duration._
 
-class PaymentRepo() {
+@javax.inject.Singleton
+class PaymentRepo @Inject()() {
   implicit private val session: AutoSession = AutoSession
   private val UTC = ZoneId.of("UTC")
 
@@ -31,7 +33,7 @@ class PaymentRepo() {
     sql"""
        select id, source, destination, code, issuer, units, received, scheduled, status
        from payments
-       order by scheduled, source, destination
+       order by id
     """.map{ rs =>
       Payment(
         id = rs.longOpt("id"),
