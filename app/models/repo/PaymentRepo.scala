@@ -1,6 +1,6 @@
 package models.repo
 
-import java.time.{ZoneId, ZonedDateTime}
+import java.time.{Instant, ZoneId, ZonedDateTime}
 
 import akka.NotUsed
 import akka.stream.scaladsl.{Flow, Sink}
@@ -34,20 +34,46 @@ class PaymentRepo @Inject()() {
        select id, source, destination, code, issuer, units, received, scheduled, status
        from payments
        order by id
-    """.map{ rs =>
-      Payment(
-        id = rs.longOpt("id"),
-        source = KeyPair.fromAccountId(rs.string("source")),
-        destination = KeyPair.fromAccountId(rs.string("destination")),
-        code = rs.string("code"),
-        issuer = rs.stringOpt("issuer").map(KeyPair.fromAccountId),
-        units = rs.long("units"),
-        received = ZonedDateTime.ofInstant(rs.timestamp("received").toInstant, UTC),
-        scheduled = ZonedDateTime.ofInstant(rs.timestamp("scheduled").toInstant, UTC),
-        status = Payment.status(rs.string("status"))
-      )
-    }.list().apply()
+    """.map(from).list().apply()
   }
+
+  def due: Seq[Payment] = {
+    sql"""
+       select id, source, destination, code, issuer, units, received, scheduled, status
+       from payments
+       where status='pending'
+       and scheduled <= ${ZonedDateTime.now.toInstant}
+    """.map(from).list().apply()
+  }
+
+  def submit(ids: Seq[Long]): Unit = {
+    sql"""
+        update payments set status='submitted' where id in ($ids)
+    """.update().apply()
+  }
+
+  def durationUntilNextDue: Option[FiniteDuration] = {
+    sql"""select min(scheduled) as next from payments where status='pending'""".map {rs =>
+      Option(rs.timestamp("next")).map { next =>
+        val when = ZonedDateTime.ofInstant(next.toInstant, UTC)
+        val now = ZonedDateTime.now
+        Duration.fromNanos(math.max(0L, java.time.Duration.between(now.toInstant, when.toInstant).toNanos))
+      }
+    }.single().apply().flatten
+  }
+
+  private def from(rs: WrappedResultSet): Payment =
+    Payment(
+      id = rs.longOpt("id"),
+      source = KeyPair.fromAccountId(rs.string("source")),
+      destination = KeyPair.fromAccountId(rs.string("destination")),
+      code = rs.string("code"),
+      issuer = rs.stringOpt("issuer").map(KeyPair.fromAccountId),
+      units = rs.long("units"),
+      received = ZonedDateTime.ofInstant(rs.timestamp("received").toInstant, UTC),
+      scheduled = ZonedDateTime.ofInstant(rs.timestamp("scheduled").toInstant, UTC),
+      status = Payment.status(rs.string("status"))
+    )
 }
 
 case class Payment(id: Option[Long],
