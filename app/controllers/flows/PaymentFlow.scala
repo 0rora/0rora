@@ -20,8 +20,19 @@ case class PaymentFlow(config: Configuration) {
   val sink: Sink[PaymentOperation, NotUsed] = Flow[PaymentOperation]
     .groupedWithin(100, 1.second)
     .map(Transaction(account, _))
+    .map{x => println(s"A! $x"); x}
+
     .map(_.sign(signerKey))
-    .mapAsync(1)(_.submit())
+    .map{x => println(s"B! $x"); x}
+
+    .map(_.submit())
+    .map{x => println(s"C! $x"); x}
+
+    .mapAsync(1)(_.recover { case t =>
+      t.printStackTrace()
+      null
+    })
+
     .to(Sink.foreach(println))
 
 }

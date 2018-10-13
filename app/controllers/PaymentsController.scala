@@ -5,6 +5,7 @@ import controllers.actions.AuthenticatedUserAction
 import javax.inject._
 import models.{CheckForPayments, PaymentProcessor}
 import models.repo.{Payment, PaymentRepo}
+import play.api.Configuration
 import play.api.libs.functional.syntax._
 import play.api.libs.json.{JsPath, Json, Writes}
 import play.api.mvc.{MessagesAbstractController, MessagesControllerComponents}
@@ -13,10 +14,11 @@ import play.api.mvc.{MessagesAbstractController, MessagesControllerComponents}
 class PaymentsController @Inject()(cc: MessagesControllerComponents,
                                    authenticatedUserAction: AuthenticatedUserAction,
                                    paymentRepo: PaymentRepo,
+                                   config: Configuration,
                                    system: ActorSystem
                                   ) extends MessagesAbstractController(cc) {
 
-  private val paymentProcessor = system.actorOf(Props(classOf[PaymentProcessor], paymentRepo))
+  private val paymentProcessor = system.actorOf(Props(classOf[PaymentProcessor], paymentRepo, config))
   paymentProcessor ! CheckForPayments
 
   private val paymentFields = (p: Payment) =>

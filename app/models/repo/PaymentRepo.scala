@@ -6,7 +6,8 @@ import akka.NotUsed
 import akka.stream.scaladsl.{Flow, Sink}
 import javax.inject.Inject
 import scalikejdbc.{AutoSession, _}
-import stellar.sdk.{KeyPair, PublicKeyOps}
+import stellar.sdk.op.PaymentOperation
+import stellar.sdk.{Asset, IssuedAmount, KeyPair, NativeAmount, PublicKeyOps}
 
 import scala.concurrent.duration._
 
@@ -84,7 +85,16 @@ case class Payment(id: Option[Long],
                    units: Long,
                    received: ZonedDateTime,
                    scheduled: ZonedDateTime,
-                   status: Payment.Status)
+                   status: Payment.Status) {
+
+  def asOperation: PaymentOperation = {
+    println("converting to operation")
+    PaymentOperation(
+      destination, issuer.map(i => IssuedAmount(units, Asset(code, i))).getOrElse(NativeAmount(units)), Some(source)
+    )
+  }
+
+}
 
 object Payment {
 
