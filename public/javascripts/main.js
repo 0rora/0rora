@@ -26,9 +26,10 @@ function topAppBar() {
     });
 }
 
+let snackbar = null;
 function snackattack(message) {
-    new mdc.snackbar.MDCSnackbar(document.querySelector('.mdc-snackbar'))
-        .show({ message: message, actionText: 'OK', actionHandler: function () {} });
+    if (!snackbar) snackbar = new mdc.snackbar.MDCSnackbar(document.querySelector('.mdc-snackbar'));
+    snackbar.show({ message: message, actionText: 'OK', actionHandler: function () {} });
 }
 
 function drawer() {
@@ -139,7 +140,7 @@ function enableFileDragAndDrop() {
     });
 }
 
-var dashboardFocus = null;
+let dashboardFocus = null;
 function switchDashboardFocusTo(section) {
     if (dashboardFocus) dashboardFocus.addClass('hidden');
     dashboardFocus = $("#section_" + section);
