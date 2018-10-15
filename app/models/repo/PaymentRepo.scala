@@ -1,10 +1,12 @@
 package models.repo
 
 import java.time.{Instant, ZoneId, ZonedDateTime}
+import java.util.Locale
 
 import akka.NotUsed
 import akka.stream.scaladsl.{Flow, Sink}
 import javax.inject.Inject
+import models.repo.Payment.{Failed, Submitted, Succeeded}
 import scalikejdbc.{AutoSession, _}
 import stellar.sdk.op.PaymentOperation
 import stellar.sdk.{Asset, IssuedAmount, KeyPair, NativeAmount, PublicKeyOps}
@@ -47,11 +49,17 @@ class PaymentRepo @Inject()() {
     """.map(from).list().apply()
   }
 
-  def submit(ids: Seq[Long]): Unit = {
+  private def updateStatus(ids: Seq[Long], status: Payment.Status): Unit = {
     sql"""
-        update payments set status='submitted' where id in ($ids)
+        update payments set status=${status.name}::payment_status where id in ($ids)
     """.update().apply()
   }
+
+  def submit(ids: Seq[Long]): Unit = updateStatus(ids, Submitted)
+
+  def confirm(ids: Seq[Long]): Unit = updateStatus(ids, Succeeded)
+
+  def reject(ids: Seq[Long]): Unit = updateStatus(ids, Failed)
 
   def durationUntilNextDue: Option[FiniteDuration] = {
     sql"""select min(scheduled) as next from payments where status='pending'""".map {rs =>
@@ -87,12 +95,9 @@ case class Payment(id: Option[Long],
                    scheduled: ZonedDateTime,
                    status: Payment.Status) {
 
-  def asOperation: PaymentOperation = {
-    println("converting to operation")
-    PaymentOperation(
-      destination, issuer.map(i => IssuedAmount(units, Asset(code, i))).getOrElse(NativeAmount(units)), Some(source)
-    )
-  }
+  def asOperation = PaymentOperation(
+    destination, issuer.map(i => IssuedAmount(units, Asset(code, i))).getOrElse(NativeAmount(units)), Some(source)
+  )
 
 }
 
@@ -106,7 +111,9 @@ object Payment {
     case _ => throw new Exception(s"Payment status unrecognised: $s")
   }
 
-  sealed trait Status
+  sealed trait Status {
+    val name: String = getClass.getSimpleName.toLowerCase().replace("$", "")
+  }
 
   case object Pending extends Status
 

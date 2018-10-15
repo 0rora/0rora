@@ -127,6 +127,7 @@ function enableFileDragAndDrop() {
             success: function(data) {
                 $media.addClass(data.success ? 'is-success' : 'is-error' );
                 console.log("data: ", data);
+                snackattack("Submitted " + data.count + " payment" + (data.count === 1 ? "" : "s"));
                 if (!data.success) {
                     console.log(data.msg);
                 }
