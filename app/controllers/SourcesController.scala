@@ -8,6 +8,7 @@ import akka.stream.scaladsl.{Keep, Sink, Source}
 import javax.inject.Inject
 import kantan.csv.ops._
 import kantan.csv.{rfc, _}
+import models.PaymentProcessor
 import models.repo.{Payment, PaymentRepo}
 import play.api.Configuration
 import play.api.libs.Files
@@ -23,6 +24,7 @@ import scala.concurrent.duration._
 class SourcesController @Inject()(cc: MessagesControllerComponents,
                                   config: Configuration,
                                   paymentRepo: PaymentRepo,
+                                  paymentProcessor: PaymentProcessor,
                                   implicit val system: ActorSystem) extends MessagesAbstractController(cc) {
 
   implicit private val mat: ActorMaterializer = ActorMaterializer()
@@ -47,17 +49,16 @@ class SourcesController @Inject()(cc: MessagesControllerComponents,
     val path = request.body.files.head.ref.path
     def iter = path.asCsvReader[Payment](rfc.withoutHeader).collect { case Right(op) => op }.toIterator
 
-    val count = Source.fromIterator(() => iter)
+    val (count, _) = Source.fromIterator(() => iter)
       .alsoToMat(countingSink)(Keep.right)
-      .toMat(paymentRepo.writer)(Keep.left)
+      .toMat(paymentRepo.writer)(Keep.both)
       .run()
+
+    paymentProcessor.checkForPayments()
 
     count.map(i => Ok(
       Json.obj("success" -> true, "count" -> i)
     ))
-
-    // todo - snack message on update
-    // todo - message to payment actor to check
   }
 
 }

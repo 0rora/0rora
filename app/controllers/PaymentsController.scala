@@ -1,9 +1,9 @@
 package controllers
 
-import akka.actor.{ActorSystem, Props}
+import akka.actor.ActorSystem
 import controllers.actions.AuthenticatedUserAction
 import javax.inject._
-import models.{CheckForPayments, PaymentProcessor}
+import models.PaymentProcessor
 import models.repo.{Payment, PaymentRepo}
 import play.api.Configuration
 import play.api.libs.functional.syntax._
@@ -14,12 +14,12 @@ import play.api.mvc.{MessagesAbstractController, MessagesControllerComponents}
 class PaymentsController @Inject()(cc: MessagesControllerComponents,
                                    authenticatedUserAction: AuthenticatedUserAction,
                                    paymentRepo: PaymentRepo,
+                                   processor: PaymentProcessor,
                                    config: Configuration,
                                    system: ActorSystem
                                   ) extends MessagesAbstractController(cc) {
 
-  private val paymentProcessor = system.actorOf(Props(classOf[PaymentProcessor], paymentRepo, config))
-  paymentProcessor ! CheckForPayments
+  processor.checkForPayments()
 
   private val paymentFields = (p: Payment) =>
     Some((p.scheduled.toString, p.source.accountId, p.destination.accountId, p.code, p.units))

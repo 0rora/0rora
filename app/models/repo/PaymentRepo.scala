@@ -7,6 +7,7 @@ import akka.NotUsed
 import akka.stream.scaladsl.{Flow, Sink}
 import javax.inject.Inject
 import models.repo.Payment.{Failed, Submitted, Succeeded}
+import play.api.Logger
 import scalikejdbc.{AutoSession, _}
 import stellar.sdk.op.PaymentOperation
 import stellar.sdk.{Asset, IssuedAmount, KeyPair, NativeAmount, PublicKeyOps}
@@ -64,6 +65,8 @@ class PaymentRepo @Inject()() {
   def durationUntilNextDue: Option[FiniteDuration] = {
     sql"""select min(scheduled) as next from payments where status='pending'""".map {rs =>
       Option(rs.timestamp("next")).map { next =>
+
+        Logger.debug(s"next = $next")
         val when = ZonedDateTime.ofInstant(next.toInstant, UTC)
         val now = ZonedDateTime.now
         Duration.fromNanos(math.max(0L, java.time.Duration.between(now.toInstant, when.toInstant).toNanos))
