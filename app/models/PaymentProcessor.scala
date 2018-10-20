@@ -7,8 +7,8 @@ import akka.stream.scaladsl.{Flow, Sink, Source}
 import javax.inject.{Inject, Singleton}
 import models.repo.{Payment, PaymentRepo}
 import play.api.{Configuration, Logger}
-import stellar.sdk.resp.TransactionProcessed
-import stellar.sdk.{KeyPair, Network, TestNetwork, Transaction}
+import stellar.sdk.resp.{AccountResp, TransactionProcessed, TransactionRejected}
+import stellar.sdk.{Account, KeyPair, Network, TestNetwork, Transaction}
 
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContextExecutor}
@@ -24,8 +24,6 @@ class PaymentProcessor @Inject()(repo: PaymentRepo,
   def checkForPayments(after: FiniteDuration = 1.second): Unit =
     system.scheduler.scheduleOnce(after, actor, CheckForPayments)
 
-  def pay(payments: Seq[Payment]): Unit = actor ! Pay(payments)
-
   class ActorDef() extends Actor {
 
     implicit private val ec: ExecutionContextExecutor = context.dispatcher
@@ -33,14 +31,27 @@ class PaymentProcessor @Inject()(repo: PaymentRepo,
     implicit private val network: Network = TestNetwork
 
     private val signerKey = KeyPair.fromSecretSeed(config.get[String]("luxe.account.secret"))
-    private val account = Await.result(network.account(signerKey), 10.seconds)
+    private val accounts: Source[Account, NotUsed] = {
+      val init = Await.result(network.account(signerKey), 1.minute).toAccount
+      def next(seqNo: Long): Stream[Account] = Stream.cons(init.copy(sequenceNumber = seqNo), next(seqNo + 1))
+      Source.fromIterator(() => next(init.sequenceNumber).iterator)
+    }
 
     val paymentSink: Sink[Payment, NotUsed] = Flow[Payment]
       .groupedWithin(100, 1.second)
-      .map(ps => Transaction(account, ps.map(_.asOperation)).sign(signerKey).submit().map(_ -> ps))
+      .zip(accounts)
+      .map{ case (ps, account) =>
+        println(s"paying with seqNo ${account.sequenceNumber}")
+        val operations = ps.map(_.asOperation)
+        Transaction(account, operations).sign(signerKey).submit().map(_ -> ps)
+      }
       .mapAsync(parallelism = 1)(_.map{
         case (_: TransactionProcessed, ps) => self ! Confirm(ps)
-        case (_, ps) => self ! Reject(ps)
+        case (x: TransactionRejected, ps) =>
+          println(s"rejected: ${x.resultXDR}")
+          self ! Reject(ps)
+          // todo - rethink response hierarchy, because txn submit shouldn't have to cater for history
+        case x => println(s"huh? $x")
       })
       .to(Sink.ignore)
 
@@ -58,7 +69,8 @@ class PaymentProcessor @Inject()(repo: PaymentRepo,
         Logger.debug(s"Paying ${payments.length} payments")
         repo.submit(payments.flatMap(_.id))
         Source.fromIterator(() => payments.iterator).to(paymentSink).run()
-        repo.durationUntilNextDue.foreach(context.system.scheduler.scheduleOnce(_, self, CheckForPayments))
+        repo.durationUntilNextDue.filter(_ > Duration.Zero)
+          .foreach(context.system.scheduler.scheduleOnce(_, self, CheckForPayments))
 
       case Confirm(payments) =>
         repo.confirm(payments.flatMap(_.id))
