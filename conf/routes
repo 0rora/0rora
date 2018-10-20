@@ -11,7 +11,7 @@ GET     /dashboard                  controllers.DashboardController.dashboard
 POST    /sources/csv                controllers.SourcesController.uploadCSV
 
 # Data
-GET     /payments                   controllers.PaymentsController.list
+GET     /payments/success           controllers.PaymentsController.listSucceeded
 
 # Authentication
 GET     /logout                     controllers.LoggedInController.logout

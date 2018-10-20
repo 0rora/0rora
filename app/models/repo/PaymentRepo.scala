@@ -33,11 +33,12 @@ class PaymentRepo @Inject()() {
     """.batch(params: _*).apply()
   })
 
-  def list: Seq[Payment] = {
+  def list(status: Payment.Status): Seq[Payment] = {
     sql"""
        select id, source, destination, code, issuer, units, received, scheduled, status
        from payments
-       order by id
+       where status=${status.name}::payment_status
+       order by id desc
     """.map(from).list().apply()
   }
 

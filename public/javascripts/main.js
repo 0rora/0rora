@@ -49,7 +49,7 @@ function paymentsList() {
 function loadPayments() {
     const template = $('#payment-template').html();
     $.ajax({
-        url: '/payments',
+        url: '/payments/success',
         type: 'GET',
         success: function(data) {
             const rendered = Mustache.render(template, { payments: data });

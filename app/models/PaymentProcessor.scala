@@ -50,8 +50,7 @@ class PaymentProcessor @Inject()(repo: PaymentRepo,
         case (x: TransactionRejected, ps) =>
           println(s"rejected: ${x.resultXDR}")
           self ! Reject(ps)
-          // todo - rethink response hierarchy, because txn submit shouldn't have to cater for history
-        case x => println(s"huh? $x")
+        case x => // todo - see https://github.com/Synesso/scala-stellar-sdk/issues/49
       })
       .to(Sink.ignore)
 
