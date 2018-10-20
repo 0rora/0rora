@@ -23,10 +23,10 @@ class PaymentsController @Inject()(cc: MessagesControllerComponents,
   processor.checkForPayments()
 
   private val paymentFields = (p: Payment) =>
-    Some((p.scheduled.toString, p.source.accountId, p.destination.accountId, p.code, p.units))
+    Some((p.scheduled.toInstant.toEpochMilli, p.source.accountId, p.destination.accountId, p.code, p.units))
 
   implicit val placeWrites: Writes[Payment] = (
-    (JsPath \ "date").write[String] and
+    (JsPath \ "date").write[Long] and
     (JsPath \ "from").write[String] and
     (JsPath \ "to").write[String] and
     (JsPath \ "asset").write[String] and

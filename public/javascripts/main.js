@@ -1,4 +1,6 @@
 let smallForm = window.matchMedia("(max-width: 767px)").matches;
+const dateFormatter = new Intl.DateTimeFormat(Intl.DateTimeFormat().resolvedOptions().locale,
+    { year: 'numeric', month: 'numeric', day: 'numeric', hour: 'numeric', minute: 'numeric', hour12: true });
 
 function loginForm() {
     new mdc.textField.MDCTextField(document.querySelector('.username'));
@@ -52,6 +54,10 @@ function loadPayments() {
         url: '/payments/success',
         type: 'GET',
         success: function(data) {
+            for (let i = 0; i < data.length; i++) {
+                let date = new Date(data[i].date);
+                data[i].date = dateFormatter.format(date);
+            }
             const rendered = Mustache.render(template, { payments: data });
             $('#payments-list').html(rendered);
         },
