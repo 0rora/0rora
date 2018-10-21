@@ -62,6 +62,7 @@ body {
     height: 0;
     padding: 16px;
     cursor: pointer;
+    font-size: 0.8rem;
 }
 
 /* CSV upload card */
