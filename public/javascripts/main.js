@@ -2,6 +2,49 @@ let smallForm = window.matchMedia("(max-width: 767px)").matches;
 const dateFormatter = new Intl.DateTimeFormat(Intl.DateTimeFormat().resolvedOptions().locale,
     { year: 'numeric', month: 'numeric', day: 'numeric', hour: 'numeric', minute: 'numeric', hour12: true });
 
+const drawer = document.querySelector('.mdc-drawer');
+const list = document.querySelector('.mdc-list');
+let activeDrawer;
+let activeList;
+
+const topAppBar = mdc.topAppBar.MDCTopAppBar.attachTo(document.getElementById('app-bar'));
+topAppBar.listen('MDCTopAppBar:nav', () => {
+    if (typeof activeDrawer !== 'undefined') {
+        activeDrawer.open = !activeDrawer.open;
+    }
+});
+
+
+const actualResizeHandler = () => {
+    let drawerButton = $('.mdc-top-app-bar__row > section > button');
+    if (window.matchMedia('(max-width: 767px)').matches) {
+        if (typeof activeList !== 'undefined') {
+            activeList.destroy();
+        }
+        drawer.classList.add('mdc-drawer--modal');
+        activeDrawer = mdc.drawer.MDCDrawer.attachTo(drawer);
+        drawerButton.show();
+    } else {
+        if (typeof activeDrawer !== 'undefined') {
+            activeDrawer.destroy();
+        }
+        drawer.classList.remove('mdc-drawer--modal');
+        activeList = mdc.list.MDCList.attachTo(list);
+        activeList.wrapFocus = true;
+        drawerButton.hide();
+    }
+};
+
+let resizeTimeout;
+const resizeThrottler = () => {
+    if (!resizeTimeout) {
+        resizeTimeout = setTimeout(() => {
+            resizeTimeout = null;
+            actualResizeHandler();
+        }, 66);
+    }
+};
+
 function loginForm() {
     new mdc.textField.MDCTextField(document.querySelector('.username'));
     new mdc.textField.MDCTextField(document.querySelector('.password'));
@@ -15,31 +58,10 @@ function loginForm() {
 }
 
 let modalDrawer;
-
-function topAppBar() {
-    if (!document.querySelector('.mdc-top-app-bar')) return;
-    const topAppBar = mdc.topAppBar.MDCTopAppBar.attachTo(document.querySelector('.mdc-top-app-bar'));
-    topAppBar.setScrollTarget(document.querySelector('.drawer-main-content'));
-    topAppBar.listen('MDCTopAppBar:nav', () => {
-        modalDrawer.open = !modalDrawer.open;
-    });
-    document.querySelector(".mdc-list").addEventListener('click', (event) => {
-        modalDrawer.open = false;
-    });
-}
-
 let snackbar = null;
 function snackattack(message) {
     if (!snackbar) snackbar = new mdc.snackbar.MDCSnackbar(document.querySelector('.mdc-snackbar'));
     snackbar.show({ message: message, actionText: 'OK', actionHandler: function () {} });
-}
-
-function drawer() {
-    if (!document.querySelector('.mdc-drawer--modal')) return;
-    modalDrawer = mdc.drawer.MDCDrawer.attachTo(document.querySelector('.mdc-drawer--modal'));
-    let list = mdc.list.MDCList.attachTo(document.querySelector('.mdc-list--permanent'));
-    list.wrapFocus = true;
-    changedMedia();
 }
 
 function paymentsList() {
@@ -65,26 +87,6 @@ function loadPayments() {
             console.log("xhr: ", xhr);
         }
     });
-}
-
-function resized() {
-    let smallForm_ = window.matchMedia("(max-width: 767px)").matches;
-    if (smallForm !== smallForm_) {
-        smallForm = smallForm_;
-        changedMedia();
-    }
-}
-
-function changedMedia() {
-    let drawerButton = $('.mdc-top-app-bar__row > section > button');
-    if (smallForm) {
-        $('.mdc-drawer--permanent').hide();
-        drawerButton.show();
-    } else {
-        $('.mdc-drawer--permanent').show();
-        drawerButton.hide();
-        modalDrawer.open = false;
-    }
 }
 
 let droppedFiles = false;
@@ -164,9 +166,10 @@ window.onload = function() {
     if (originalOnload) {
         originalOnload();
     }
-    $(window).resize(resized);
-    topAppBar();
-    drawer();
+    $(window).resize(resizeThrottler);
+    actualResizeHandler();
+    // topAppBar();
+    // drawer();
     enableFileDragAndDrop();
     if ($('#login-form').length === 0) {
         window.onhashchange = hashChanged;

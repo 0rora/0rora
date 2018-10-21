@@ -26,6 +26,20 @@ body {
     fill: currentColor;
 }
 
+.mdc-drawer-app-content {
+    flex: auto;
+    overflow: auto;
+}
+
+.drawer-main-content {
+    overflow: auto;
+    height: 100%;
+}
+
+.app-bar {
+    position: absolute;
+}
+
 .username,
 .password {
     display: block;
