@@ -64,12 +64,6 @@ function snackattack(message) {
     snackbar.show({ message: message, actionText: 'OK', actionHandler: function () {} });
 }
 
-function paymentsList() {
-    if (!document.querySelector('#payments-list')) return;
-    let listEle = document.getElementById('#payments-list');
-    let list = new mdc.list.MDCList(listEle);
-}
-
 function loadPayments() {
     const template = $('#payment-template').html();
     $.ajax({

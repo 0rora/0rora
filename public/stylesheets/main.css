@@ -62,22 +62,37 @@ body {
     display: none;
 }
 
-.full-width {
+/* Payments List */
+.payments-list-table {
     width: 100%;
 }
 
-/* Payments List */
-.payments-list-header {
+tr.payments-list-header {
     padding: 0 16px;
     font-weight: bold;
+    width: 100%;
 }
 
-.payment-list-item {
+tr.payments-list-item {
+    width: 100%;
     height: 0;
     padding: 16px;
     cursor: pointer;
     font-size: 0.8rem;
 }
+
+tr.payments-list-item td {
+    max-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+tr.payments-list-item td.columnA { width: 12%; }
+tr.payments-list-item td.columnB { width: 31%; }
+tr.payments-list-item td.columnC { width: 31%; }
+tr.payments-list-item td.columnD { width: 11%; }
+tr.payments-list-item td.columnE { width: 15%; }
 
 /* CSV upload card */
 .csv-card { width: 350px; margin: 0; }

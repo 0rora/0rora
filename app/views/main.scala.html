@@ -8,30 +8,28 @@
     <!--suppress HtmlUnknownAnchorTarget -->
     <section id="section_payments" class="hidden" title="Payments">
         <script id="payment-template" type="x-tmpl-mustache">
-            <li role="separator" class="mdc-list-divider"></li>
-            {{ #payments }}
-            <li class="mdc-list-item mdc-layout-grid payment-list-item">
-                <div class="mdc-layout-grid__inner full-width">
-                    <span class="mdc-list-item__text mdc-layout-grid__cell--span-2">{{ date }}</span>
-                    <span class="mdc-list-item__text mdc-layout-grid__cell--span-3">{{ from }}</span>
-                    <span class="mdc-list-item__text mdc-layout-grid__cell--span-3">{{ to }}</span>
-                    <span class="mdc-list-item__text mdc-layout-grid__cell--span-2">{{ asset }}</span>
-                    <span class="mdc-list-item__text mdc-layout-grid__cell--span-2">{{ units }}</span>
-                </div>
-            </li>
-            {{ /payments }}
+            <table class="payments-list-table">
+                <tr class="payments-list-header">
+                    <td>Date</td>
+                    <td>Sender</td>
+                    <td>Recipient</td>
+                    <td>Asset</td>
+                    <td>Amount</td>
+                </tr>
+                {{ #payments }}
+                <tr class="payments-list-item">
+                    <td class="columnA">{{ date }}</td>
+                    <td class="columnB">{{ from }}</td>
+                    <td class="columnC">{{ to }}</td>
+                    <td class="columnD">{{ asset }}</td>
+                    <td class="columnE">{{ units }}</td>
+                </tr>
+                {{ /payments }}
+            </table>
         </script>
-        <div class="mdc-layout-grid payments-list-header">
-            <div class="mdc-layout-grid__inner full-width">
-                <span class="mdc-list-item__text mdc-layout-grid__cell--span-2">Date</span>
-                <span class="mdc-list-item__text mdc-layout-grid__cell--span-3">Sender</span>
-                <span class="mdc-list-item__text mdc-layout-grid__cell--span-3">Recipient</span>
-                <span class="mdc-list-item__text mdc-layout-grid__cell--span-2">Asset</span>
-                <span class="mdc-list-item__text mdc-layout-grid__cell--span-2">Amount</span>
-            </div>
-        </div>
-        <ul class="mdc-list" id="payments-list" aria-orientation="vertical">
-        </ul>
+
+        <div id="payments-list"></div>
+
     </section>
 
     @*
