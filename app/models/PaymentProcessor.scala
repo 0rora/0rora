@@ -6,7 +6,8 @@ import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.{Flow, Sink, Source}
 import javax.inject.{Inject, Singleton}
 import models.repo.{Payment, PaymentRepo}
-import play.api.{Configuration, Logger}
+import play.api.inject.{Binding, Module}
+import play.api.{Configuration, Environment, Logger}
 import stellar.sdk.resp.{AccountResp, TransactionProcessed, TransactionRejected}
 import stellar.sdk.{Account, KeyPair, Network, TestNetwork, Transaction}
 
@@ -16,7 +17,7 @@ import scala.concurrent.{Await, ExecutionContextExecutor}
 @Singleton
 class PaymentProcessor @Inject()(repo: PaymentRepo,
                                  config: Configuration,
-                                 system: ActorSystem) extends {
+                                 system: ActorSystem) {
 
   private val actor = system.actorOf(Props(new ActorDef()))
   private implicit val ec: ExecutionContextExecutor = system.dispatcher
@@ -99,5 +100,8 @@ class PaymentProcessor @Inject()(repo: PaymentRepo,
 
 }
 
-
+class PaymentProcessorModule extends Module {
+  def bindings(env: Environment, config: Configuration): Seq[Binding[_]] =
+    Seq(bind(classOf[PaymentProcessor]).toSelf.eagerly())
+}
 
