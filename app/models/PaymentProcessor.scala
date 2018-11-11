@@ -21,8 +21,8 @@ class PaymentProcessor @Inject()(repo: PaymentRepo,
   private val actor = system.actorOf(Props(new ActorDef()))
   private implicit val ec: ExecutionContextExecutor = system.dispatcher
 
-  def checkForPayments(after: FiniteDuration = 1.second): Unit =
-    system.scheduler.scheduleOnce(after, actor, CheckForPayments)
+  def checkForPayments(reason: String, after: FiniteDuration = 1.second): Unit =
+    system.scheduler.scheduleOnce(after, actor, CheckForPayments(reason))
 
   class ActorDef() extends Actor {
 
@@ -31,59 +31,71 @@ class PaymentProcessor @Inject()(repo: PaymentRepo,
     implicit private val network: Network = TestNetwork
 
     private val signerKey = KeyPair.fromSecretSeed(config.get[String]("luxe.account.secret"))
-    private val accounts: Source[Account, NotUsed] = {
-      val init = Await.result(network.account(signerKey), 1.minute).toAccount
-      def next(seqNo: Long): Stream[Account] = Stream.cons(init.copy(sequenceNumber = seqNo), next(seqNo + 1))
-      Source.fromIterator(() => next(init.sequenceNumber).iterator)
-    }
 
-    val paymentSink: Sink[Payment, NotUsed] = Flow[Payment]
-      .groupedWithin(100, 1.second)
-      .zip(accounts)
+    val paymentSink: Sink[(Seq[Payment], Account), NotUsed] = Flow[(Seq[Payment], Account)]
       .map{ case (ps, account) =>
-        println(s"paying with seqNo ${account.sequenceNumber}")
         val operations = ps.map(_.asOperation)
-        Transaction(account, operations).sign(signerKey).submit().map(_ -> ps)
+        Logger.debug(s"Transacting account ${account.publicKey} (seqNo ${account.sequenceNumber})")
+        val txn = Transaction(account, operations).sign(signerKey)
+        Logger.debug(""+txn)
+        txn.submit().map(_ -> ps -> account)
       }
       .mapAsync(parallelism = 1)(_.map{
-        case (_: TransactionProcessed, ps) => self ! Confirm(ps)
-        case (x: TransactionRejected, ps) =>
-          println(s"rejected: ${x.resultXDR}")
-          self ! Reject(ps)
+        case ((x: TransactionProcessed, ps), account) =>
+          Logger.debug(s"Successful ${x.resultXDR} $x")
+          self ! Confirm(ps, account)
+        case ((x: TransactionRejected, ps), account) =>
+          Logger.debug(s"Failure ${x.resultXDR} $x")
+          self ! Reject(ps, account)
         case x => // todo - see https://github.com/Synesso/scala-stellar-sdk/issues/49
       })
       .to(Sink.ignore)
 
 
-    override def receive: Receive = {
+    override def receive: Receive = transactUsing(Seq(Await.result(network.account(signerKey), 1.minute).toAccount), Nil)
 
-      case CheckForPayments =>
-        Logger.debug("Checking for due payments")
-        val payments = repo.due
-        if (payments.nonEmpty) {
-          self ! Pay(payments)
+    private def transactUsing(readyAccounts: Seq[Account], busyAccounts: Seq[Account]): Receive = {
+      case CheckForPayments(reason) =>
+        Logger.debug(s"Checking for due payments ($reason)")
+        repo.due match {
+          case Nil =>
+          case _ if readyAccounts.isEmpty =>
+            checkForPayments("No ready accounts at start of transact attempt", 5.seconds)
+          case payments =>
+            val (submittingPayments, leftOverPayments) = payments.splitAt(100 * readyAccounts.size)
+            val (submittingAccounts, leftOverAccounts) = readyAccounts.splitAt((submittingPayments.size / 100.0).ceil.toInt)
+            Logger.debug(s"Processing ${submittingPayments.size}/${payments.size} pending payments via ${submittingAccounts.size} accounts (${submittingAccounts.map(_.sequenceNumber)}")
+
+            repo.submit(submittingPayments.flatMap(_.id))
+            Source.fromIterator(() => submittingPayments.iterator)
+              .grouped(100)
+              .zip(Source.fromIterator(() => submittingAccounts.iterator))
+              .to(paymentSink).run()
+
+            if (leftOverPayments.nonEmpty) {
+              self ! checkForPayments("No ready accounts remaining after batch transacting", 5.seconds)
+            } else {
+              repo.durationUntilNextDue.filter(_ > Duration.Zero)
+                .foreach(checkForPayments("Scheduled next payment after prior transaction batch", _))
+            }
+
+            context.become(transactUsing(leftOverAccounts, busyAccounts ++ leftOverAccounts))
         }
 
-      case Pay(payments) =>
-        Logger.debug(s"Paying ${payments.length} payments")
-        repo.submit(payments.flatMap(_.id))
-        Source.fromIterator(() => payments.iterator).to(paymentSink).run()
-        repo.durationUntilNextDue.filter(_ > Duration.Zero)
-          .foreach(context.system.scheduler.scheduleOnce(_, self, CheckForPayments))
-
-      case Confirm(payments) =>
+      case Confirm(payments, account) =>
         repo.confirm(payments.flatMap(_.id))
+        context.become(transactUsing(readyAccounts :+ account.withIncSeq, busyAccounts.filterNot(_ == account)))
 
-      case Reject(payments) =>
+      case Reject(payments, account) =>
         repo.reject(payments.flatMap(_.id))
+        context.become(transactUsing(readyAccounts :+ account.withIncSeq, busyAccounts.filterNot(_ == account)))
 
     }
   }
 
-  private object CheckForPayments
-  private case class Pay(payments: Seq[Payment])
-  private case class Confirm(payments: Seq[Payment])
-  private case class Reject(payments: Seq[Payment])
+  private case class CheckForPayments(reason: String)
+  private case class Confirm(payments: Seq[Payment], account: Account)
+  private case class Reject(payments: Seq[Payment], account: Account)
 
 }
 

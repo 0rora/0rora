@@ -20,7 +20,7 @@ class PaymentsController @Inject()(cc: MessagesControllerComponents,
                                    system: ActorSystem
                                   ) extends MessagesAbstractController(cc) {
 
-  processor.checkForPayments()
+  processor.checkForPayments("Initial")
 
   private val paymentFields = (p: Payment) =>
     Some((p.scheduled.toInstant.toEpochMilli, p.source.accountId, p.destination.accountId, p.code, p.units))

@@ -54,7 +54,7 @@ class SourcesController @Inject()(cc: MessagesControllerComponents,
       .toMat(paymentRepo.writer)(Keep.both)
       .run()
 
-    paymentProcessor.checkForPayments()
+    paymentProcessor.checkForPayments("CSV uploaded")
 
     count.map(i => Ok(
       Json.obj("success" -> true, "count" -> i)
