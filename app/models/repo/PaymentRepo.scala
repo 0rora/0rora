@@ -75,8 +75,6 @@ class PaymentRepo @Inject()() {
   def durationUntilNextDue: Option[FiniteDuration] = {
     sql"""select min(scheduled) as next from payments where status='pending'""".map {rs =>
       Option(rs.timestamp("next")).map { next =>
-
-        Logger.debug(s"next = $next")
         val when = ZonedDateTime.ofInstant(next.toInstant, UTC)
         val now = ZonedDateTime.now
         Duration.fromNanos(math.max(0L, java.time.Duration.between(now.toInstant, when.toInstant).toNanos))

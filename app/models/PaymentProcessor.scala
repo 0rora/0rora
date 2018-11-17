@@ -22,8 +22,10 @@ class PaymentProcessor @Inject()(repo: PaymentRepo,
   private val actor = system.actorOf(Props(new ActorDef()))
   private implicit val ec: ExecutionContextExecutor = system.dispatcher
 
-  def checkForPayments(reason: String, after: FiniteDuration = 1.second): Unit =
+  def checkForPayments(reason: String, after: FiniteDuration = 1.second): Unit = {
+    Logger.debug(s"Checking again for due payments after $after")
     system.scheduler.scheduleOnce(after, actor, CheckForPayments(reason))
+  }
 
   class ActorDef() extends Actor {
 
