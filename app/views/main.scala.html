@@ -6,7 +6,7 @@
         payments list
     *@
     <!--suppress HtmlUnknownAnchorTarget -->
-    <section id="section_payments" class="hidden" title="Payments">
+    <section id="section_payments-history" class="hidden" title="Payments History">
         <script id="payment-template" type="x-tmpl-mustache">
             <table class="payments-list-table">
                 <tr class="payments-list-header">
@@ -29,6 +29,32 @@
         </script>
 
         <div id="payments-list"></div>
+
+    </section>
+
+    <section id="section_payments-schedule" class="hidden" title="Payments Scheduled">
+        <script id="payment-schedule-template" type="x-tmpl-mustache">
+            <table class="payments-list-table">
+                <tr class="payments-list-header">
+                    <td>Date</td>
+                    <td>Sender</td>
+                    <td>Recipient</td>
+                    <td>Asset</td>
+                    <td>Amount</td>
+                </tr>
+                {{ #payments }}
+                <tr class="payments-list-item">
+                    <td class="columnA">{{ date }}</td>
+                    <td class="columnB">{{ from }}</td>
+                    <td class="columnC">{{ to }}</td>
+                    <td class="columnD">{{ asset }}</td>
+                    <td class="columnE">{{ units }}</td>
+                </tr>
+                {{ /payments }}
+            </table>
+        </script>
+
+        <div id="payments-schedule-list"></div>
 
     </section>
 
@@ -100,8 +126,12 @@
                     <div class="mdc-drawer__content">
                         <nav class="mdc-list">
                             <hr class="mdc-list-divider"/>
-                            <a class="mdc-list-item mdc-list-item--activated" href="#payments" aria-selected="true">
-                                <i class="material-icons mdc-list-item__graphic" aria-hidden="true">compare_arrows</i>Payments
+                            <h6 class="mdc-list-group__subheader">Payments</h6>
+                            <a class="mdc-list-item mdc-list-item--activated" href="#payments-history" aria-selected="true">
+                                <i class="material-icons mdc-list-item__graphic" aria-hidden="true">compare_arrows</i>History
+                            </a>
+                            <a class="mdc-list-item" href="#payments-schedule">
+                                <i class="material-icons mdc-list-item__graphic" aria-hidden="true">schedule</i>Schedule
                             </a>
                             <hr class="mdc-list-divider"/>
                             <h6 class="mdc-list-group__subheader">Sources</h6>

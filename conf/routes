@@ -12,6 +12,7 @@ POST    /sources/csv                controllers.SourcesController.uploadCSV
 
 # Data
 GET     /payments/success           controllers.PaymentsController.listSucceeded
+GET     /payments/schedule          controllers.PaymentsController.listScheduled
 
 # Authentication
 GET     /logout                     controllers.LoggedInController.logout

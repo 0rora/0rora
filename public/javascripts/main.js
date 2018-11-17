@@ -83,6 +83,25 @@ function loadPayments() {
     });
 }
 
+function loadPaymentSchedule() {
+    const template = $('#payment-schedule-template').html();
+    $.ajax({
+        url: '/payments/schedule',
+        type: 'GET',
+        success: function(data) {
+            for (let i = 0; i < data.length; i++) {
+                let date = new Date(data[i].date);
+                data[i].date = dateFormatter.format(date);
+            }
+            const rendered = Mustache.render(template, { payments: data });
+            $('#payments-schedule-list').html(rendered);
+        },
+        error: function(xhr) {
+            console.log("xhr: ", xhr);
+        }
+    });
+}
+
 let droppedFiles = false;
 function enableFileDragAndDrop() {
     if (!document.querySelector('#upload-form')) return;
@@ -148,7 +167,8 @@ function switchDashboardFocusTo(section) {
     dashboardFocus = $("#section_" + section);
     dashboardFocus.removeClass('hidden');
     $('.mdc-top-app-bar__title').text(dashboardFocus.attr('title'));
-    if (section === "payments") loadPayments();
+    if (section === "payments-history") loadPayments();
+    if (section === "payments-schedule") loadPaymentSchedule();
 }
 
 function hashChanged(e) {
@@ -167,7 +187,7 @@ window.onload = function() {
     enableFileDragAndDrop();
     if ($('#login-form').length === 0) {
         window.onhashchange = hashChanged;
-        window.location.hash = "#payments";
+        window.location.hash = "#payments-history";
         hashChanged();
     }
 };

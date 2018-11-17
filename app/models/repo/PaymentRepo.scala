@@ -6,7 +6,7 @@ import java.util.Locale
 import akka.NotUsed
 import akka.stream.scaladsl.{Flow, Sink}
 import javax.inject.Inject
-import models.repo.Payment.{Failed, Submitted, Succeeded}
+import models.repo.Payment.{Failed, Pending, Submitted, Succeeded}
 import play.api.Logger
 import scalikejdbc.{AutoSession, _}
 import stellar.sdk.op.PaymentOperation
@@ -33,11 +33,20 @@ class PaymentRepo @Inject()() {
     """.batch(params: _*).apply()
   })
 
-  def list(status: Payment.Status): Seq[Payment] = {
+  def listScheduled: Seq[Payment] = {
     sql"""
        select id, source, destination, code, issuer, units, received, scheduled, status
        from payments
-       where status=${status.name}::payment_status
+       where status=${Pending.name}::payment_status
+       order by scheduled
+    """.map(from).list().apply()
+  }
+
+  def listHistoric: Seq[Payment] = {
+    sql"""
+       select id, source, destination, code, issuer, units, received, scheduled, status
+       from payments
+       where status=${Succeeded.name}::payment_status
        order by id desc
     """.map(from).list().apply()
   }

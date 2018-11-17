@@ -4,7 +4,7 @@ import akka.actor.ActorSystem
 import controllers.actions.AuthenticatedUserAction
 import javax.inject._
 import models.PaymentProcessor
-import models.repo.Payment.Succeeded
+import models.repo.Payment.{Pending, Succeeded}
 import models.repo.{Payment, PaymentRepo}
 import play.api.Configuration
 import play.api.libs.functional.syntax._
@@ -34,6 +34,10 @@ class PaymentsController @Inject()(cc: MessagesControllerComponents,
     )(unlift(paymentFields))
 
   def listSucceeded = authenticatedUserAction { implicit req =>
-    Ok(Json.toJson(paymentRepo.list(Succeeded)))
+    Ok(Json.toJson(paymentRepo.listHistoric))
+  }
+
+  def listScheduled = authenticatedUserAction { implicit req =>
+    Ok(Json.toJson(paymentRepo.listScheduled))
   }
 }
