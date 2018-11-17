@@ -1,6 +1,7 @@
 package controllers
 
 import java.time.ZonedDateTime
+import java.time.format.DateTimeFormatter.ISO_OFFSET_DATE_TIME
 
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
@@ -14,12 +15,9 @@ import play.api.Configuration
 import play.api.libs.Files
 import play.api.libs.json.Json
 import play.api.mvc._
-import stellar.sdk.op.PaymentOperation
-import stellar.sdk.{Amount, Asset, KeyPair, NativeAmount}
+import stellar.sdk.KeyPair
 
-import scala.concurrent.Await
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.duration._
 
 class SourcesController @Inject()(cc: MessagesControllerComponents,
                                   config: Configuration,
@@ -29,7 +27,7 @@ class SourcesController @Inject()(cc: MessagesControllerComponents,
 
   implicit private val mat: ActorMaterializer = ActorMaterializer()
   implicit private val paymentDecoder: RowDecoder[Payment] = RowDecoder.ordered {
-    (s: String, d: String, c: String, i: Option[String], u: Long) =>
+    (s: String, d: String, c: String, i: Option[String], u: Long, schedule: Option[String]) =>
       Payment(
         None,
         KeyPair.fromAccountId(s),
@@ -38,7 +36,7 @@ class SourcesController @Inject()(cc: MessagesControllerComponents,
         i.map(KeyPair.fromAccountId),
         u,
         ZonedDateTime.now,
-        ZonedDateTime.now,
+        schedule.map(ZonedDateTime.parse(_, ISO_OFFSET_DATE_TIME)).getOrElse(ZonedDateTime.now),
         Payment.Pending
       )
   }

@@ -8,7 +8,7 @@ import javax.inject.{Inject, Singleton}
 import models.repo.{Payment, PaymentRepo}
 import play.api.inject.{Binding, Module}
 import play.api.{Configuration, Environment, Logger}
-import stellar.sdk.resp.{AccountResp, TransactionProcessed, TransactionRejected}
+import stellar.sdk.resp.{TransactionProcessed, TransactionRejected}
 import stellar.sdk.{Account, KeyPair, Network, TestNetwork, Transaction}
 
 import scala.concurrent.duration._
@@ -60,6 +60,8 @@ class PaymentProcessor @Inject()(repo: PaymentRepo,
         Logger.debug(s"Checking for due payments ($reason)")
         repo.due match {
           case Nil =>
+            repo.durationUntilNextDue.filter(_ > Duration.Zero)
+              .foreach(checkForPayments("Scheduled next payment", _))
           case _ if readyAccounts.isEmpty =>
             checkForPayments("No ready accounts at start of transact attempt", 5.seconds)
           case payments =>
