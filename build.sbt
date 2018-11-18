@@ -11,6 +11,7 @@ libraryDependencies ++= Seq(
   guice, evolutions, jdbc,
   "io.github.synesso" %% "scala-stellar-sdk" % "0.4.1",
   "com.nrinaudo" %% "kantan.csv-generic" % "0.4.0",
+  "com.h2database" % "h2" % "1.4.192",
   "org.postgresql" % "postgresql" % "42.2.5",
   "org.scalikejdbc" %% "scalikejdbc" % "3.3.0",
   "org.scalikejdbc" %% "scalikejdbc-config" % "3.3.0",

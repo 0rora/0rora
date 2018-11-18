@@ -1,13 +1,11 @@
 package models.repo
 
-import java.time.{Instant, ZoneId, ZonedDateTime}
-import java.util.Locale
+import java.time.{ZoneId, ZonedDateTime}
 
 import akka.NotUsed
 import akka.stream.scaladsl.{Flow, Sink}
 import javax.inject.Inject
 import models.repo.Payment.{Failed, Pending, Submitted, Succeeded}
-import play.api.Logger
 import scalikejdbc.{AutoSession, _}
 import stellar.sdk.op.PaymentOperation
 import stellar.sdk.{Asset, IssuedAmount, KeyPair, NativeAmount, PublicKeyOps}
@@ -29,7 +27,7 @@ class PaymentRepo @Inject()() {
     }.to(Sink.foreach { params =>
     sql"""
       insert into payments (source, destination, code, issuer, units, received, scheduled, status)
-      values (?, ?, ?, ?, ?, ?, ?, cast(? as payment_status))
+      values (?, ?, ?, ?, ?, ?, ?, ?)
     """.batch(params: _*).apply()
   })
 
@@ -37,7 +35,7 @@ class PaymentRepo @Inject()() {
     sql"""
        select id, source, destination, code, issuer, units, received, scheduled, status
        from payments
-       where status=${Pending.name}::payment_status
+       where status=${Pending.name}
        order by scheduled
     """.map(from).list().apply()
   }
@@ -46,7 +44,7 @@ class PaymentRepo @Inject()() {
     sql"""
        select id, source, destination, code, issuer, units, received, scheduled, status
        from payments
-       where status=${Succeeded.name}::payment_status
+       where status=${Succeeded.name}
        order by id desc
     """.map(from).list().apply()
   }
@@ -62,7 +60,7 @@ class PaymentRepo @Inject()() {
 
   private def updateStatus(ids: Seq[Long], status: Payment.Status): Unit = {
     sql"""
-        update payments set status=${status.name}::payment_status where id in ($ids)
+        update payments set status=${status.name} where id in ($ids)
     """.update().apply()
   }
 
