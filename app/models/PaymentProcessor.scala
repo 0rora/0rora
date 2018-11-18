@@ -62,6 +62,7 @@ class PaymentProcessor @Inject()(repo: PaymentRepo,
         Logger.debug(s"Checking for due payments ($reason)")
         repo.due match {
           case Nil =>
+            Logger.debug("No payments due")
             repo.durationUntilNextDue.filter(_ > Duration.Zero)
               .foreach(checkForPayments("Scheduled next payment", _))
           case _ if readyAccounts.isEmpty =>
