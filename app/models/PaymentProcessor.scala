@@ -29,7 +29,6 @@ class PaymentProcessor @Inject()(repo: PaymentRepo,
 
   class ActorDef() extends Actor {
 
-    implicit private val ec: ExecutionContextExecutor = context.dispatcher
     implicit private val materializer: ActorMaterializer = ActorMaterializer()
     implicit private val network: Network = TestNetwork
 
