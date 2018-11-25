@@ -39,12 +39,11 @@ class PaymentProcessor @Inject()(repo: PaymentRepo,
         val operations = ps.map(_.asOperation)
         Logger.debug(s"Transacting account ${account.publicKey} (seqNo ${account.sequenceNumber})")
         val txn = Transaction(account, operations).sign(signerKey)
-        Logger.debug(""+txn)
         txn.submit().map(_ -> ps -> account)
       }
       .mapAsync(parallelism = 1)(_.map{
         case ((x: TransactionProcessed, ps), account) =>
-          Logger.debug(s"Successful ${x.resultXDR} $x")
+          Logger.debug(s"Successful")
           self ! Confirm(ps, account)
         case ((x: TransactionRejected, ps), account) =>
           Logger.debug(s"Failure ${x.resultXDR} $x")
