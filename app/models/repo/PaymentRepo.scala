@@ -70,6 +70,15 @@ class PaymentRepo @Inject()() {
 
   def reject(ids: Seq[Long]): Unit = updateStatus(ids, Failed)
 
+  def earliestTimeDue: Option[ZonedDateTime] = {
+    sql"""select min(scheduled) as next from payments where status='pending'""".map { rs =>
+      Option(rs.timestamp("next"))
+        .map(_.toInstant)
+        .map(ZonedDateTime.ofInstant(_, UTC))
+    }.single().apply().flatten
+  }
+
+  // todo - remove me
   def durationUntilNextDue: Option[FiniteDuration] = {
     sql"""select min(scheduled) as next from payments where status='pending'""".map {rs =>
       Option(rs.timestamp("next")).map { next =>

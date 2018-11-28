@@ -1,5 +1,7 @@
 package models
 
+import java.time.ZonedDateTime
+
 import akka.NotUsed
 import akka.actor.{Actor, ActorSystem, Props}
 import akka.stream.ActorMaterializer
@@ -13,6 +15,7 @@ import stellar.sdk.{Account, KeyPair, Network, TestNetwork, Transaction}
 
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContextExecutor}
+import scala.util.{Failure, Success}
 
 @Singleton
 class PaymentProcessor @Inject()(repo: PaymentRepo,
@@ -20,19 +23,19 @@ class PaymentProcessor @Inject()(repo: PaymentRepo,
                                  system: ActorSystem) {
 
   private val actor = system.actorOf(Props(new ActorDef()))
+  private val signerKey = KeyPair.fromSecretSeed(config.get[String]("luxe.account.secret"))
   private implicit val ec: ExecutionContextExecutor = system.dispatcher
 
-  def checkForPayments(reason: String, after: FiniteDuration = 1.second): Unit = {
-    Logger.debug(s"Checking again for due payments after $after")
-    system.scheduler.scheduleOnce(after, actor, CheckForPayments(reason))
-  }
+  actor ! RegisterAccount(signerKey)
+  actor ! UpdateNextPaymentTime
+  system.scheduler.schedule(5.seconds, 5.seconds, actor, ProcessPayments)
+
+  def checkForPayments(): Unit = actor ! UpdateNextPaymentTime
 
   class ActorDef() extends Actor {
 
     implicit private val materializer: ActorMaterializer = ActorMaterializer()
     implicit private val network: Network = TestNetwork
-
-    private val signerKey = KeyPair.fromSecretSeed(config.get[String]("luxe.account.secret"))
 
     val paymentSink: Sink[(Seq[Payment], Account), NotUsed] = Flow[(Seq[Payment], Account)]
       .map{ case (ps, account) =>
@@ -53,53 +56,67 @@ class PaymentProcessor @Inject()(repo: PaymentRepo,
       .to(Sink.ignore)
 
 
-    override def receive: Receive = transactUsing(Seq(Await.result(network.account(signerKey), 1.minute).toAccount), Nil)
+    override def receive: Receive = state(
+      readyAccounts = Nil,
+      busyAccounts = Nil,
+      nextKnownPaymentDate = None
+    )
 
-    private def transactUsing(readyAccounts: Seq[Account], busyAccounts: Seq[Account]): Receive = {
-      case CheckForPayments(reason) =>
-        Logger.debug(s"Checking for due payments ($reason)")
-        repo.due match {
-          case Nil =>
-            Logger.debug("No payments due")
-            repo.durationUntilNextDue.filter(_ > Duration.Zero)
-              .foreach(checkForPayments("Scheduled next payment", _))
-          case _ if readyAccounts.isEmpty =>
-            checkForPayments("No ready accounts at start of transact attempt", 5.seconds)
-          case payments =>
-            val (submittingPayments, leftOverPayments) = payments.splitAt(100 * readyAccounts.size)
-            val (submittingAccounts, leftOverAccounts) = readyAccounts.splitAt((submittingPayments.size / 100.0).ceil.toInt)
-            Logger.debug(s"Processing ${submittingPayments.size}/${payments.size} pending payments via ${submittingAccounts.size} accounts (${submittingAccounts.map(_.sequenceNumber)}")
+    private def state(
+      readyAccounts: Seq[Account],
+      busyAccounts: Seq[Account],
+      nextKnownPaymentDate: Option[ZonedDateTime]): Receive = {
 
-            repo.submit(submittingPayments.flatMap(_.id))
-            Source.fromIterator(() => submittingPayments.iterator)
-              .grouped(100)
-              .zip(Source.fromIterator(() => submittingAccounts.iterator))
-              .to(paymentSink).run()
+      // If there are payments due, find and pay them
+      case ProcessPayments if nextKnownPaymentDate.exists(_.isBefore(ZonedDateTime.now())) =>
+        val payments = repo.due
+        val submittingPayments = payments.take(100 * readyAccounts.size)
+        val (submittingAccounts, leftOverAccounts) = readyAccounts.splitAt((submittingPayments.size / 100.0).ceil.toInt)
+        Logger.debug(s"Processing ${submittingPayments.size}/${payments.size} pending payments via ${submittingAccounts.size} accounts (${submittingAccounts.map(_.sequenceNumber)}")
 
-            if (leftOverPayments.nonEmpty) {
-              self ! checkForPayments("No ready accounts remaining after batch transacting", 5.seconds)
-            } else {
-              repo.durationUntilNextDue.filter(_ > Duration.Zero)
-                .foreach(checkForPayments("Scheduled next payment after prior transaction batch", _))
-            }
+        repo.submit(submittingPayments.flatMap(_.id))
+        Source.fromIterator(() => submittingPayments.iterator)
+          .grouped(100)
+          .zip(Source.fromIterator(() => submittingAccounts.iterator))
+          .to(paymentSink).run()
 
-            context.become(transactUsing(leftOverAccounts, busyAccounts ++ leftOverAccounts))
-        }
+        context.become(state(leftOverAccounts, submittingAccounts ++ busyAccounts, repo.earliestTimeDue))
 
+      // Check the database to find when the next pending payment is due
+      case UpdateNextPaymentTime =>
+        val due = repo.earliestTimeDue
+        context.become(state(readyAccounts, busyAccounts, due))
+
+      // Confirm that these payments have been successful and that this account is ready to use
       case Confirm(payments, account) =>
         repo.confirm(payments.flatMap(_.id))
-        context.become(transactUsing(readyAccounts :+ account.withIncSeq, busyAccounts.filterNot(_ == account)))
+        context.become(state(readyAccounts :+ account.withIncSeq, busyAccounts.filterNot(_ == account), nextKnownPaymentDate))
 
+      // Mark these payments as failed and handle account
       case Reject(payments, account) =>
         repo.reject(payments.flatMap(_.id))
-        context.become(transactUsing(readyAccounts :+ account.withIncSeq, busyAccounts.filterNot(_ == account)))
+        context.become(state(readyAccounts :+ account.withIncSeq, busyAccounts.filterNot(_ == account), nextKnownPaymentDate))
+
+      // Add a new account to the pool
+      case UpdateAccount(accn) =>
+        context.become(state(accn +: readyAccounts, busyAccounts, nextKnownPaymentDate))
+
+      // Fetch details of account
+      case RegisterAccount(kp) =>
+        network.account(kp).onComplete{
+          case Success(accn) => self ! UpdateAccount(accn.toAccount)
+          case Failure(t) => Logger.warn(s"Unable to register account ${kp.accountId}", t)
+        }
 
     }
   }
 
-  private case class CheckForPayments(reason: String)
+  private case object ProcessPayments
+  private case object UpdateNextPaymentTime
+  private case class RegisterAccount(keyPair: KeyPair)
   private case class Confirm(payments: Seq[Payment], account: Account)
   private case class Reject(payments: Seq[Payment], account: Account)
+  private case class UpdateAccount(accn: Account)
 
 }
 
