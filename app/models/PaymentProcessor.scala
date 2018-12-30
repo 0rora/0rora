@@ -49,7 +49,8 @@ class PaymentProcessor @Inject()(repo: PaymentRepo,
           Logger.debug(s"Successful")
           self ! Confirm(ps, account)
         case ((x: TransactionRejected, ps), account) =>
-          Logger.debug(s"Failure ${x.resultXDR} $x")
+          Logger.debug(s"Failure ${x.resultCode} xx${x.resultXDR} $x")
+          println(x)
           self ! Reject(ps, account)
         case x => // todo - see https://github.com/Synesso/scala-stellar-sdk/issues/49
       })
@@ -69,18 +70,22 @@ class PaymentProcessor @Inject()(repo: PaymentRepo,
 
       // If there are payments due, find and pay them
       case ProcessPayments if nextKnownPaymentDate.exists(_.isBefore(ZonedDateTime.now())) =>
-        val payments = repo.due
-        val submittingPayments = payments.take(100 * readyAccounts.size)
-        val (submittingAccounts, leftOverAccounts) = readyAccounts.splitAt((submittingPayments.size / 100.0).ceil.toInt)
-        Logger.debug(s"Processing ${submittingPayments.size}/${payments.size} pending payments via ${submittingAccounts.size} accounts (${submittingAccounts.map(_.sequenceNumber)}")
+        if (readyAccounts.isEmpty) {
+          Logger.debug(s"Payments are due, but no accounts are ready")
+        } else {
+          val payments = repo.due
+          val submittingPayments = payments.take(100 * readyAccounts.size)
+          val (submittingAccounts, leftOverAccounts) = readyAccounts.splitAt((submittingPayments.size / 100.0).ceil.toInt)
+          Logger.debug(s"Processing ${submittingPayments.size}/${payments.size} pending payments via ${submittingAccounts.size} accounts (${submittingAccounts.map(_.sequenceNumber)}")
 
-        repo.submit(submittingPayments.flatMap(_.id))
-        Source.fromIterator(() => submittingPayments.iterator)
-          .grouped(100)
-          .zip(Source.fromIterator(() => submittingAccounts.iterator))
-          .to(paymentSink).run()
+          repo.submit(submittingPayments.flatMap(_.id))
+          Source.fromIterator(() => submittingPayments.iterator)
+            .grouped(100)
+            .zip(Source.fromIterator(() => submittingAccounts.iterator))
+            .to(paymentSink).run()
 
-        context.become(state(leftOverAccounts, submittingAccounts ++ busyAccounts, repo.earliestTimeDue))
+          context.become(state(leftOverAccounts, submittingAccounts ++ busyAccounts, repo.earliestTimeDue))
+        }
 
       // Check the database to find when the next pending payment is due
       case UpdateNextPaymentTime =>
