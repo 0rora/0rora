@@ -201,7 +201,6 @@ p {
 
 h1, h2, h3, h4, h5, h6 {
     color: #fff;
-    /*color: #f5e9e9;*/
     font-family: "Raleway", Helvetica, sans-serif;
     font-weight: 600;
     letter-spacing: 0.175em;
@@ -263,14 +262,17 @@ h6 {
 
     h3 {
         font-size: 0.9rem;
+        color: #FF524F;
     }
 
     h4 {
         font-size: 0.75rem;
+        color: #FF524F;
     }
 
     h5 {
         font-size: 0.675rem;
+        color: #FF524F;
     }
 
 }
@@ -3331,7 +3333,7 @@ ul.feature-icons li.pending:before {
 }
 
 #wrapper > section > .content > section:first-child {
-    margin-top: 6rem;
+    margin-top: 4rem;
 }
 
 #wrapper > section.intro {
@@ -3385,7 +3387,7 @@ ul.feature-icons li.pending:before {
 }
 
 #wrapper section {
-    margin: 7.5rem 0 0 0;
+    margin: 0.5rem 0 0 0;
 }
 
 #wrapper section > header {
