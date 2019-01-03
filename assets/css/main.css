@@ -3875,16 +3875,16 @@ body.is-ie #wrapper > section > .content > section {
 .corner-ribbon {
     font-weight: bold;
     width: 200px;
-    background: #b4b2d9;
+    background: #1a164e;
     position: absolute;
     top: 25px;
     left: -50px;
     text-align: center;
     line-height: 40px;
     letter-spacing: 1px;
-    color: #fff;
+    color: #d1d1d1;
     z-index: 1;
-    box-shadow: 0 0 30px rgba(0, 0, 0, .3), inset 0 0 0 5px #b4b2d9, inset 0 0 0 7px white;
+    box-shadow: 0 0 30px rgba(0, 0, 0, .3), inset 0 0 0 5px #20164e, inset 0 0 0 7px #b1b1b1;
     transform: rotate(-45deg);
     -webkit-transform: rotate(-45deg);
 }
