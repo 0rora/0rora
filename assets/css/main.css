@@ -3157,10 +3157,10 @@ ul.feature-icons:first-child {
 }
 
 ul.feature-icons li {
-    margin: 2.5rem 0 0 0;
+    margin: 1.2rem 0 0 0;
     padding: 0.5rem 0 0 4.5rem;
     position: relative;
-    width: 50%;
+    width: 100%;
 }
 
 ul.feature-icons li.pending {
@@ -3186,10 +3186,6 @@ ul.feature-icons li:before {
 
 ul.feature-icons li.pending:before {
     color: lightgray;
-}
-
-ul.feature-icons li:nth-child(1), ul.feature-icons li:nth-child(2) {
-    margin-top: 0;
 }
 
 @media screen and (max-width: 736px) {
