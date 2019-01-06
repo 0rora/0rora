@@ -1,5 +1,12 @@
 # Luxe
 
+_Stellar Payments Manager_
+
+A self-hosted solution for easily making, scheduling, editing and responding to Stellar payments.
+
+[https://luxe-app.github.io/luxe/](https://luxe-app.github.io/luxe/)
+
+
 ## Installation
 
 ### Quickstart Docker
@@ -14,4 +21,5 @@ It is necessary to define the environment variables:
                        account management functionality is implemented.
 
 
-[![@app_luxe](http://i.imgur.com/tXSoThF.png)](https://twitter.com/app_luxe)
+[![Stellar](https://luxe-app.github.io/luxe/images/web-ico.png "Stellar Rocket")](https://luxe-app.github.io/luxe/) [![@app_luxe](https://luxe-app.github.io/luxe/images/twitter-ico.png)](https://twitter.com/app_luxe)  
+![Stellar](https://luxe-app.github.io/luxe/images/stellar-ico.png "Stellar Rocket") `GBYTSTC7BBN6MFO55M3IFPIZJ2O5UVNZSF357OVIAVMCDVIHULUXEPAY`
