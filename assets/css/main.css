@@ -1867,8 +1867,8 @@ button,
     background-color: transparent;
     border-radius: 0.325rem;
     border: 0;
-    box-shadow: inset 0 0 0 2px rgba(144, 144, 144, 0.25);
-    color: #000000 !important;
+    box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.25);
+    color: #f5e9e9 !important;
     cursor: pointer;
     display: inline-block;
     font-family: "Raleway", Helvetica, sans-serif;
@@ -1889,8 +1889,9 @@ input[type="reset"]:hover,
 input[type="button"]:hover,
 button:hover,
 .button:hover {
-    box-shadow: inset 0 0 0 2px #2ee4bb;
-    color: #2ee4bb !important;
+    box-shadow: none;
+    background-color: rgba(216, 48, 7, 0.71);
+    color: #f5e9e9 !important;
 }
 
 input[type="submit"]:active,
@@ -1898,9 +1899,9 @@ input[type="reset"]:active,
 input[type="button"]:active,
 button:active,
 .button:active {
-    background-color: rgba(73, 252, 212, 0.25);
-    box-shadow: inset 0 0 0 2px #2ee4bb;
-    color: #2ee4bb !important;
+    box-shadow: inset 0 0 0 2px rgba(216, 48, 7, 0.71);
+    background-color: rgba(216, 48, 7, 0.71);
+    color: #f5e9e9 !important;
 }
 
 input[type="submit"].small,
@@ -2840,7 +2841,7 @@ a.arrow .label {
 
 a.arrow:before {
     background-image: url("data:image/svg+xml;charset=utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' x='0px' y='0px' viewBox='0 0 512 512'%3E%3Cpath d='M442.53,346.28L293.65,495.16c-0.33,0.33-0.7,0.62-1.05,0.94c-9.16,9.77-22.15,15.9-36.6,15.9 c-14.44,0-27.43-6.13-36.59-15.88c-0.35-0.33-0.72-0.62-1.06-0.96L69.47,346.28c-19.62-19.62-19.62-51.44,0-71.05 c19.62-19.62,51.43-19.62,71.06,0l65.23,65.23V50.24C205.76,22.5,228.25,0,256,0s50.24,22.5,50.24,50.24v290.21l65.23-65.23 c19.62-19.62,51.43-19.62,71.05,0C462.15,294.84,462.15,326.66,442.53,346.28z' fill='%23f5e9e9' /%3E%3C/svg%3E");
-    background-position: center;
+    background-position: top;
     background-repeat: no-repeat;
     background-size: contain;
     content: '';
