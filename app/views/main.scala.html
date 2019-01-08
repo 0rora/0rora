@@ -98,9 +98,9 @@
         sources -> upload CSV
     *@
     <section id="section_sources-csv" class="hidden" title="Sources > CSV">
-        @helper.form(action = routes.SourcesController.uploadCSV, 'enctype -> "multipart/form-data", 'id -> "upload-form") {
-            @helper.CSRF.formField
             <div class="mdc-layout-grid">
+            @helper.form(action = routes.SourcesController.uploadCSV, 'enctype -> "multipart/form-data", 'id -> "upload-form") {
+                @helper.CSRF.formField
                 <div class="mdc-layout-grid__inner">
                     <div class="mdc-layout-grid__cell--span-4">
                         <div class="mdc-card csv-card">
@@ -124,8 +124,9 @@
                         </div>
                     </div>
                 </div>
+            }
+            <p>Demo site users may try <a href="@routes.Assets.versioned("demo/payments.csv")">this sample file.</a></p>
             </div>
-        }
     </section>
 
 
