@@ -10,11 +10,12 @@ import javax.inject.{Inject, Singleton}
 import models.repo.{Payment, PaymentRepo}
 import play.api.inject.{Binding, Module}
 import play.api.{Configuration, Environment, Logger}
-import stellar.sdk.resp.{TransactionProcessed, TransactionRejected}
-import stellar.sdk.{Account, KeyPair, Network, TestNetwork, Transaction}
+import stellar.sdk.model.response.{TransactionApproved, TransactionRejected}
+import stellar.sdk.model.{Account, Transaction}
+import stellar.sdk.{KeyPair, Network, TestNetwork}
 
+import scala.concurrent.ExecutionContextExecutor
 import scala.concurrent.duration._
-import scala.concurrent.{Await, ExecutionContextExecutor}
 import scala.util.{Failure, Success}
 
 @Singleton
@@ -45,14 +46,13 @@ class PaymentProcessor @Inject()(repo: PaymentRepo,
         txn.submit().map(_ -> ps -> account)
       }
       .mapAsync(parallelism = 1)(_.map{
-        case ((x: TransactionProcessed, ps), account) =>
+        case ((x: TransactionApproved, ps), account) =>
           Logger.debug(s"Successful")
           self ! Confirm(ps, account)
         case ((x: TransactionRejected, ps), account) =>
           Logger.debug(s"Failure ${x.resultCode} xx${x.resultXDR} $x")
           println(x)
           self ! Reject(ps, account)
-        case x => // todo - see https://github.com/Synesso/scala-stellar-sdk/issues/49
       })
       .to(Sink.ignore)
 

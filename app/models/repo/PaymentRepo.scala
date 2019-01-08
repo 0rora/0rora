@@ -7,8 +7,9 @@ import akka.stream.scaladsl.{Flow, Sink}
 import javax.inject.Inject
 import models.repo.Payment.{Failed, Pending, Submitted, Succeeded}
 import scalikejdbc.{AutoSession, _}
-import stellar.sdk.op.PaymentOperation
-import stellar.sdk.{Asset, IssuedAmount, KeyPair, NativeAmount, PublicKeyOps}
+import stellar.sdk.model.{Asset, IssuedAmount, NativeAmount}
+import stellar.sdk.model.op.PaymentOperation
+import stellar.sdk.{KeyPair, PublicKeyOps}
 
 import scala.concurrent.duration._
 
