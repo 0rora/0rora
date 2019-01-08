@@ -2531,6 +2531,10 @@ ul {
     padding-left: 1rem;
 }
 
+table, ul {
+    margin: 0;
+}
+
 ul li {
     padding-left: 0.325rem;
 }
