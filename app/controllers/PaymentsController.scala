@@ -4,12 +4,11 @@ import akka.actor.ActorSystem
 import controllers.actions.AuthenticatedUserAction
 import javax.inject._
 import models.PaymentProcessor
-import models.repo.Payment.{Pending, Succeeded}
 import models.repo.{Payment, PaymentRepo}
 import play.api.Configuration
 import play.api.libs.functional.syntax._
 import play.api.libs.json.{JsPath, Json, Writes}
-import play.api.mvc.{MessagesAbstractController, MessagesControllerComponents}
+import play.api.mvc.{Action, AnyContent, MessagesAbstractController, MessagesControllerComponents}
 
 @Singleton
 class PaymentsController @Inject()(cc: MessagesControllerComponents,
@@ -21,21 +20,22 @@ class PaymentsController @Inject()(cc: MessagesControllerComponents,
                                   ) extends MessagesAbstractController(cc) {
 
   private val paymentFields = (p: Payment) =>
-    Some((p.scheduled.toInstant.toEpochMilli, p.source.accountId, p.destination.accountId, p.code, p.units))
+    Some((p.scheduled.toInstant.toEpochMilli, p.source.accountId, p.destination.accountId, p.code, p.units, p.status.name))
 
   implicit val paymentWrites: Writes[Payment] = (
     (JsPath \ "date").write[Long] and
     (JsPath \ "from").write[String] and
     (JsPath \ "to").write[String] and
     (JsPath \ "asset").write[String] and
-    (JsPath \ "units").write[Long]
+    (JsPath \ "units").write[Long] and
+    (JsPath \ "status").write[String]
     )(unlift(paymentFields))
 
-  def listSucceeded = authenticatedUserAction { implicit req =>
+  def listHistory: Action[AnyContent] = authenticatedUserAction { implicit req =>
     Ok(Json.toJson(paymentRepo.listHistoric))
   }
 
-  def listScheduled = authenticatedUserAction { implicit req =>
+  def listScheduled: Action[AnyContent] = authenticatedUserAction { implicit req =>
     Ok(Json.toJson(paymentRepo.listScheduled))
   }
 }

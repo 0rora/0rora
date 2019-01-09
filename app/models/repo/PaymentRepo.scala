@@ -45,7 +45,7 @@ class PaymentRepo @Inject()() {
     sql"""
        select id, source, destination, code, issuer, units, received, scheduled, status
        from payments
-       where status=${Succeeded.name}
+       where status in ('failed', 'succeeded')
        order by id desc
     """.map(from).list().apply()
   }

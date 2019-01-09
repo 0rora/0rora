@@ -67,7 +67,7 @@ function snackattack(message) {
 function loadPayments() {
     const template = $('#payment-template').html();
     $.ajax({
-        url: '/payments/success',
+        url: '/payments/history',
         type: 'GET',
         success: function(data) {
             for (let i = 0; i < data.length; i++) {

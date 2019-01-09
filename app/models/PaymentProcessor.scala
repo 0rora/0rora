@@ -11,6 +11,7 @@ import models.repo.{Payment, PaymentRepo}
 import play.api.inject.{Binding, Module}
 import play.api.{Configuration, Environment, Logger}
 import stellar.sdk.model.response.{TransactionApproved, TransactionRejected}
+import stellar.sdk.model.result.{TransactionFailure, TransactionNotAttempted}
 import stellar.sdk.model.{Account, Transaction}
 import stellar.sdk.{KeyPair, Network, TestNetwork}
 
@@ -50,8 +51,12 @@ class PaymentProcessor @Inject()(repo: PaymentRepo,
           Logger.debug(s"Successful")
           self ! Confirm(ps, account)
         case ((x: TransactionRejected, ps), account) =>
-          Logger.debug(s"Failure ${x.resultCode} xx${x.resultXDR} $x")
-          println(x)
+          x.result match {
+            case TransactionFailure(feeCharged, operationResults) =>
+              Logger.debug(s"Failure $operationResults")
+            case TransactionNotAttempted(reason, feeCharged) =>
+              Logger.debug(s"Not attempted because $reason")
+          }
           self ! Reject(ps, account)
       })
       .to(Sink.ignore)
