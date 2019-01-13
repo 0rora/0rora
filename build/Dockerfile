@@ -9,4 +9,4 @@ RUN mkdir /app && \
     (cd /tmp/luxe-1.0-SNAPSHOT/ && mv * /app) && \
     rm -r /app/share
 EXPOSE 9000
-CMD ["sh", "-c", "/app/bin/luxe -DAPPLICATION_SECRET=${APPLICATION_SECRET} -DLUXE_ACCOUNT_SEED=${LUXE_ACCOUNT_SEED} -Dconfig.resource=in-memory-db.conf"]
+CMD ["sh", "-c", "/app/bin/luxe -J-Xmx512m -DAPPLICATION_SECRET=${APPLICATION_SECRET} -DLUXE_ACCOUNT_SEED=${LUXE_ACCOUNT_SEED} -Dconfig.resource=in-memory-db.conf"]

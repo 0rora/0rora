@@ -11,7 +11,7 @@ import models.repo.{Payment, PaymentRepo}
 import play.api.inject.{Binding, Module}
 import play.api.{Configuration, Environment, Logger}
 import stellar.sdk.model.response.{TransactionApproved, TransactionRejected}
-import stellar.sdk.model.result.{TransactionFailure, TransactionNotAttempted}
+import stellar.sdk.model.result.{PaymentSuccess, TransactionFailure, TransactionNotAttempted}
 import stellar.sdk.model.{Account, Transaction}
 import stellar.sdk.{KeyPair, Network, TestNetwork}
 
@@ -47,17 +47,26 @@ class PaymentProcessor @Inject()(repo: PaymentRepo,
         txn.submit().map(_ -> ps -> account)
       }
       .mapAsync(parallelism = 1)(_.map{
-        case ((x: TransactionApproved, ps), account) =>
+        case ((_: TransactionApproved, ps), account) =>
           Logger.debug(s"Successful")
           self ! Confirm(ps, account)
         case ((x: TransactionRejected, ps), account) =>
           x.result match {
-            case TransactionFailure(feeCharged, operationResults) =>
+            case TransactionFailure(_, operationResults) =>
               Logger.debug(s"Failure $operationResults")
-            case TransactionNotAttempted(reason, feeCharged) =>
+
+              // operations that were accountunderfunded should be retried & the account should be removed from the pool.
+              // or should it have its balance checked?
+
+              // todo - keystore
+
+              val (ok, ko) = ps.zip(operationResults).partition{ case (_, result) => result == PaymentSuccess }
+              self ! Reject(ko.map(_._1), account)
+              self ! Retry(ok.map(_._1), account)
+            case TransactionNotAttempted(reason, _) =>
               Logger.debug(s"Not attempted because $reason")
+              self ! Reject(ps, account)
           }
-          self ! Reject(ps, account)
       })
       .to(Sink.ignore)
 
@@ -107,6 +116,11 @@ class PaymentProcessor @Inject()(repo: PaymentRepo,
         repo.reject(payments.flatMap(_.id))
         context.become(state(readyAccounts :+ account.withIncSeq, busyAccounts.filterNot(_ == account), nextKnownPaymentDate))
 
+      // Mark these payments for retry and handle account
+      case Retry(payments, account) =>
+        repo.retry(payments.flatMap(_.id))
+        context.become(state(readyAccounts :+ account.withIncSeq, busyAccounts.filterNot(_ == account), nextKnownPaymentDate))
+
       // Add a new account to the pool
       case UpdateAccount(accn) =>
         context.become(state(accn +: readyAccounts, busyAccounts, nextKnownPaymentDate))
@@ -126,6 +140,7 @@ class PaymentProcessor @Inject()(repo: PaymentRepo,
   private case class RegisterAccount(keyPair: KeyPair)
   private case class Confirm(payments: Seq[Payment], account: Account)
   private case class Reject(payments: Seq[Payment], account: Account)
+  private case class Retry(payments: Seq[Payment], account: Account)
   private case class UpdateAccount(accn: Account)
 
 }

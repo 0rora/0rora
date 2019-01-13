@@ -60,6 +60,7 @@ class PaymentRepo @Inject()() {
   }
 
   private def updateStatus(ids: Seq[Long], status: Payment.Status): Unit = {
+    println(s"updating status to $status for $ids")
     sql"""
         update payments set status=${status.name} where id in ($ids)
     """.update().apply()
@@ -70,6 +71,8 @@ class PaymentRepo @Inject()() {
   def confirm(ids: Seq[Long]): Unit = updateStatus(ids, Succeeded)
 
   def reject(ids: Seq[Long]): Unit = updateStatus(ids, Failed)
+
+  def retry(ids: Seq[Long]): Unit = updateStatus(ids, Pending)
 
   def earliestTimeDue: Option[ZonedDateTime] = {
     sql"""select min(scheduled) as next from payments where status='pending'""".map { rs =>
