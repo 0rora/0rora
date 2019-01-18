@@ -1,5 +1,5 @@
 :root {
-    --mdc-theme-primary: #fcb8ab;
+    --mdc-theme-primary: rgb(227, 106, 72);
     --mdc-theme-secondary: #616161;
     --mdc-theme-on-primary: #442b2d;
     --mdc-theme-on-secondary: #442b2d;
