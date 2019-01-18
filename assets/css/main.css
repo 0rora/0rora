@@ -3172,7 +3172,7 @@ ul.feature-icons li {
 }
 
 ul.feature-icons li.pending {
-    color: lightgray;
+    color: gray;
 }
 
 ul.feature-icons li:before {
