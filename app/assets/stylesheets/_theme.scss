@@ -1,0 +1,16 @@
+$mdc-theme-primary: rgb(227, 106, 72);
+$mdc-theme-on-primary: #442b2d;
+$mdc-theme-secondary: #616161;
+$mdc-theme-on-secondary: #442b2d;
+$mdc-theme-surface: #FFFBFA;
+$mdc-theme-on-surface: #442C2E;
+$mdc-theme-background: #FFFFFF;
+$mdc-theme-on-background: #442C2E;
+
+
+:root {
+  --mdc-theme-primary: $mdc-theme-primary;
+  --mdc-theme-secondary: $mdc-theme-secondary;
+  --mdc-theme-on-primary: $mdc-theme-on-primary;
+  --mdc-theme-on-secondary: $mdc-theme-on-secondary;
+}

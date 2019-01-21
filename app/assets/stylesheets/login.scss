@@ -1,0 +1,52 @@
+@import "common";
+
+:root {
+  --mdc-theme-primary: rgb(227, 106, 72);
+  --mdc-theme-secondary: #616161;
+  --mdc-theme-on-primary: #442b2d;
+  --mdc-theme-on-secondary: #442b2d;
+}
+
+.header {
+  text-align: center;
+}
+
+.logo {
+  width: 220px;
+  height: 220px;
+  padding-top: 80px;
+  fill: currentColor;
+}
+
+.mdc-drawer-app-content {
+  flex: auto;
+  overflow: auto;
+}
+
+.drawer-main-content {
+  overflow: auto;
+  height: 100%;
+}
+
+.app-bar {
+  position: absolute;
+}
+
+.username,
+.password {
+  display: block;
+  width: 300px;
+  margin: 20px auto;
+}
+
+.button-container {
+  display: flex;
+  justify-content: flex-end;
+  width: 300px;
+  margin: auto;
+}
+
+.button-container button {
+  margin: 3px;
+}
+
