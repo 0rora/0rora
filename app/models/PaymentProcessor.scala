@@ -54,15 +54,10 @@ class PaymentProcessor @Inject()(repo: PaymentRepo,
           x.result match {
             case TransactionFailure(_, operationResults) =>
               Logger.debug(s"Failure $operationResults")
-
-              // operations that were accountunderfunded should be retried & the account should be removed from the pool.
-              // or should it have its balance checked?
-
-              // todo - keystore
-
               val (ok, ko) = ps.zip(operationResults).partition{ case (_, result) => result == PaymentSuccess }
               self ! Reject(ko.map(_._1), account)
               self ! Retry(ok.map(_._1), account)
+
             case TransactionNotAttempted(reason, _) =>
               Logger.debug(s"Not attempted because $reason")
               self ! Reject(ps, account)
