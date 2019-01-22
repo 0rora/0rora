@@ -19,13 +19,15 @@ class PaymentsController @Inject()(cc: MessagesControllerComponents,
                                    system: ActorSystem
                                   ) extends MessagesAbstractController(cc) {
 
+  private val stroopsInLumen = 10000000.0
+
   private val paymentFields = (p: Payment) =>
     Some((
       p.scheduled.toInstant.toEpochMilli,
       p.source.accountId,
       p.destination.accountId,
       p.code,
-      p.units,
+      p.units / stroopsInLumen,
       p.status.name
     ))
 
@@ -34,7 +36,7 @@ class PaymentsController @Inject()(cc: MessagesControllerComponents,
     (JsPath \ "from").write[String] and
     (JsPath \ "to").write[String] and
     (JsPath \ "asset").write[String] and
-    (JsPath \ "units").write[Long] and
+    (JsPath \ "units").write[Double] and
     (JsPath \ "status").write[String]
     )(unlift(paymentFields))
 
