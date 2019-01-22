@@ -46,6 +46,7 @@ class SourcesController @Inject()(cc: MessagesControllerComponents,
   def uploadCSV: Action[MultipartFormData[Files.TemporaryFile]] = Action(parse.multipartFormData).async { request =>
     val path = request.body.files.head.ref.path
     def iter = path.asCsvReader[Payment](rfc.withoutHeader).collect { case Right(op) => op }.toIterator
+      .filter(p => p.issuer.nonEmpty || p.code == "XLM")
 
     val (count, _) = Source.fromIterator(() => iter)
       .alsoToMat(countingSink)(Keep.right)
