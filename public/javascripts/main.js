@@ -75,6 +75,8 @@ function loadPayments() {
                 data[i].date = dateFormatter.format(date);
                 data[i].status_icon = (data[i].status==="succeeded") ? "fa-check-square" : "fa-exclamation-triangle";
                 data[i].status_icon_class = (data[i].status==="succeeded") ? "has-text-success" : "has-text-warning";
+                data[i].from_short = data[i].from.substring(0, 4) + "…" + data[i].from.substring(50);
+                data[i].to_short = data[i].to.substring(0, 4) + "…" + data[i].to.substring(50);
             }
             const rendered = Mustache.render(template, { payments: data });
             $('#payments-list').html(rendered);
@@ -94,6 +96,8 @@ function loadPaymentSchedule() {
             for (let i = 0; i < data.length; i++) {
                 let date = new Date(data[i].date);
                 data[i].date = dateFormatter.format(date);
+                data[i].from_short = data[i].from.substring(0, 4) + "…" + data[i].from.substring(50);
+                data[i].to_short = data[i].to.substring(0, 4) + "…" + data[i].to.substring(50);
             }
             const rendered = Mustache.render(template, { payments: data });
             $('#payments-schedule-list').html(rendered);
