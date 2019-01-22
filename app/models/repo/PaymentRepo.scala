@@ -35,7 +35,7 @@ class PaymentRepo @Inject()() {
 
   def listScheduled: Seq[Payment] = {
     sql"""
-       select id, source, destination, code, issuer, units, received, scheduled, status
+       select id, source, destination, code, issuer, units, received, scheduled, status, op_result_code
        from payments
        where status=${Pending.name}
        order by scheduled
@@ -44,7 +44,7 @@ class PaymentRepo @Inject()() {
 
   def listHistoric: Seq[Payment] = {
     sql"""
-       select id, source, destination, code, issuer, units, received, scheduled, status
+       select id, source, destination, code, issuer, units, received, scheduled, status, op_result_code
        from payments
        where status in ('failed', 'succeeded')
        order by id desc
@@ -53,7 +53,7 @@ class PaymentRepo @Inject()() {
 
   def due: Seq[Payment] = {
     sql"""
-       select id, source, destination, code, issuer, units, received, scheduled, status
+       select id, source, destination, code, issuer, units, received, scheduled, status, op_result_code
        from payments
        where status='pending'
        and scheduled <= ${ZonedDateTime.now.toInstant}
@@ -116,7 +116,8 @@ class PaymentRepo @Inject()() {
       units = rs.long("units"),
       received = ZonedDateTime.ofInstant(rs.timestamp("received").toInstant, UTC),
       scheduled = ZonedDateTime.ofInstant(rs.timestamp("scheduled").toInstant, UTC),
-      status = Payment.status(rs.string("status"))
+      status = Payment.status(rs.string("status")),
+      opResultCode = rs.intOpt("op_result_code")
     )
 }
 
@@ -128,7 +129,8 @@ case class Payment(id: Option[Long],
                    units: Long,
                    received: ZonedDateTime,
                    scheduled: ZonedDateTime,
-                   status: Payment.Status) {
+                   status: Payment.Status,
+                   opResultCode: Option[Int] = None) {
 
   def asOperation = PaymentOperation(
     destination, issuer.map(i => IssuedAmount(units, Asset(code, i))).getOrElse(NativeAmount(units)), Some(source)

@@ -16,6 +16,7 @@ import play.api.libs.Files
 import play.api.libs.json.Json
 import play.api.mvc._
 import stellar.sdk.KeyPair
+import stellar.sdk.model.result._
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
