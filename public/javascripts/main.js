@@ -73,6 +73,8 @@ function loadPayments() {
             for (let i = 0; i < data.length; i++) {
                 let date = new Date(data[i].date);
                 data[i].date = dateFormatter.format(date);
+                data[i].status_icon = (data[i].status==="succeeded") ? "fa-check-square" : "fa-exclamation-triangle";
+                data[i].status_icon_class = (data[i].status==="succeeded") ? "has-text-success" : "has-text-warning";
             }
             const rendered = Mustache.render(template, { payments: data });
             $('#payments-list').html(rendered);
