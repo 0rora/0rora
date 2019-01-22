@@ -8,23 +8,25 @@
     <!--suppress HtmlUnknownAnchorTarget -->
     <section id="section_payments-history" class="hidden" title="Payments > History">
         <script id="payment-template" type="x-tmpl-mustache">
-            <table class="payments-list-table">
-                <tr class="payments-list-header">
-                    <td>Date</td>
-                    <td>Sender</td>
-                    <td>Recipient</td>
-                    <td>Asset</td>
-                    <td>Amount</td>
-                </tr>
-                {{ #payments }}
-                <tr class="payments-list-item {{ status }}">
-                    <td class="columnA">{{ date }}</td>
-                    <td class="columnB">{{ from }}</td>
-                    <td class="columnC">{{ to }}</td>
-                    <td class="columnD">{{ asset }}</td>
-                    <td class="columnE">{{ units }}</td>
-                </tr>
-                {{ /payments }}
+            <table class="table is-fullwidth is-narrow is-size-6">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Details</th>
+                        <th>Amount</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {{ #payments }}
+                    <tr class="{{ classes }}">
+                        <td>{{ date }}</td>
+                        <td>{{ from_short }} <span class="icon"><i class="fas fa-arrow-right"></i></span> {{ to_short }}</td>
+                        <td>{{ units }} {{ asset }}</td>
+                        <td><span class="icon {{ status_icon_class }}"><i class="fas {{ status_icon }}"></i></span> {{ status }}</td>
+                    </tr>
+                    {{ /payments }}
+                </tbody>
             </table>
         </script>
 
@@ -34,23 +36,23 @@
 
     <section id="section_payments-schedule" class="hidden" title="Payments > Scheduled">
         <script id="payment-schedule-template" type="x-tmpl-mustache">
-            <table class="payments-list-table">
-                <tr class="payments-list-header">
-                    <td>Date</td>
-                    <td>Sender</td>
-                    <td>Recipient</td>
-                    <td>Asset</td>
-                    <td>Amount</td>
-                </tr>
-                {{ #payments }}
-                <tr class="payments-list-item">
-                    <td class="columnA">{{ date }}</td>
-                    <td class="columnB">{{ from }}</td>
-                    <td class="columnC">{{ to }}</td>
-                    <td class="columnD">{{ asset }}</td>
-                    <td class="columnE">{{ units }}</td>
-                </tr>
-                {{ /payments }}
+            <table class="table is-fullwidth is-narrow is-size-6">
+                <thead>
+                    <tr>
+                        <th>Scheduled</th>
+                        <th>Details</th>
+                        <th>Amount</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {{ #payments }}
+                    <tr>
+                        <td>{{ date }}</td>
+                        <td>{{ from_short }} <span class="icon"><i class="fas fa-arrow-right"></i></span> {{ to_short }}</td>
+                        <td>{{ units }} {{ asset }}</td>
+                    </tr>
+                    {{ /payments }}
+                </tbody>
             </table>
         </script>
 
@@ -104,8 +106,9 @@
 
         <title>Luxe</title>
 
+        <link rel="stylesheet" media="screen" href="@routes.Assets.versioned("lib/bulma/css/bulma.min.css")"/>
         <link rel="stylesheet" media="screen" href="@routes.Assets.versioned("stylesheets/material-components-web.min.css")"/>
-        <link rel="stylesheet" media="screen" href="@routes.Assets.versioned("stylesheets/main.css")"/>
+        <link rel="stylesheet" media="screen" href="@routes.Assets.versioned("../assets/stylesheets/main.css")"/>
         <link rel="stylesheet" media="screen" href="@routes.Assets.versioned("stylesheets/drawer.css")"/>
         <link media="screen" href="@routes.Assets.versioned("stylesheets/normalize.min.css")"/>
 
@@ -114,6 +117,8 @@
 
         <link rel="icon" sizes="192x192" href="@routes.Assets.versioned("images/favicon.png")">
         <link rel="shortcut icon" type="image/png" href="@routes.Assets.versioned("images/favicon.png")">
+
+        <script defer src="@routes.Assets.versioned("lib/font-awesome/js/all.min.js")"></script>
     </head>
     <body>
         <div id="root">

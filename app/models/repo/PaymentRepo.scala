@@ -9,6 +9,7 @@ import models.repo.Payment.{Failed, Pending, Submitted, Succeeded}
 import scalikejdbc.{AutoSession, _}
 import stellar.sdk.model.{Asset, IssuedAmount, NativeAmount}
 import stellar.sdk.model.op.PaymentOperation
+import stellar.sdk.model.result.{PaymentResult, PaymentSuccess}
 import stellar.sdk.{KeyPair, PublicKeyOps}
 
 import scala.concurrent.duration._
@@ -22,7 +23,7 @@ class PaymentRepo @Inject()() {
     .groupedWithin(100, 1.second)
     .map {
       _.map(p =>
-        Seq(p.source.accountId, p.destination.accountId, p.code, p.issuer.orNull, p.units, p.received, p.scheduled,
+        Seq(p.source.accountId, p.destination.accountId, p.code, p.issuer.map(_.accountId).orNull, p.units, p.received, p.scheduled,
           p.status.toString.toLowerCase)
       )
     }.to(Sink.foreach { params =>
@@ -34,7 +35,7 @@ class PaymentRepo @Inject()() {
 
   def listScheduled: Seq[Payment] = {
     sql"""
-       select id, source, destination, code, issuer, units, received, scheduled, status
+       select id, source, destination, code, issuer, units, received, scheduled, status, op_result_code
        from payments
        where status=${Pending.name}
        order by scheduled
@@ -43,7 +44,7 @@ class PaymentRepo @Inject()() {
 
   def listHistoric: Seq[Payment] = {
     sql"""
-       select id, source, destination, code, issuer, units, received, scheduled, status
+       select id, source, destination, code, issuer, units, received, scheduled, status, op_result_code
        from payments
        where status in ('failed', 'succeeded')
        order by id desc
@@ -52,7 +53,7 @@ class PaymentRepo @Inject()() {
 
   def due: Seq[Payment] = {
     sql"""
-       select id, source, destination, code, issuer, units, received, scheduled, status
+       select id, source, destination, code, issuer, units, received, scheduled, status, op_result_code
        from payments
        where status='pending'
        and scheduled <= ${ZonedDateTime.now.toInstant}
@@ -60,17 +61,29 @@ class PaymentRepo @Inject()() {
   }
 
   private def updateStatus(ids: Seq[Long], status: Payment.Status): Unit = {
-    println(s"updating status to $status for $ids")
     sql"""
         update payments set status=${status.name} where id in ($ids)
     """.update().apply()
   }
 
+  private def updateStatusWithOpResult(idsWithOpResult: Seq[(Long, PaymentResult)], status: Payment.Status): Unit = {
+    val batchParams: Seq[Seq[Any]] = idsWithOpResult
+      .map{ case (id, result) => Seq(status.name, result.opResultCode, id) }
+
+    sql"""
+        update payments set status=?, op_result_code=? where id=?
+    """.batch(batchParams: _*).apply()
+  }
+
   def submit(ids: Seq[Long]): Unit = updateStatus(ids, Submitted)
 
-  def confirm(ids: Seq[Long]): Unit = updateStatus(ids, Succeeded)
+  def confirm(ids: Seq[Long]): Unit =
+    updateStatusWithOpResult(ids.map(_ -> PaymentSuccess), Succeeded)
 
   def reject(ids: Seq[Long]): Unit = updateStatus(ids, Failed)
+
+  def rejectWithOpResult(idsWithResults: Seq[(Long, PaymentResult)]): Unit =
+    updateStatusWithOpResult(idsWithResults, Failed)
 
   def retry(ids: Seq[Long]): Unit = updateStatus(ids, Pending)
 
@@ -103,7 +116,8 @@ class PaymentRepo @Inject()() {
       units = rs.long("units"),
       received = ZonedDateTime.ofInstant(rs.timestamp("received").toInstant, UTC),
       scheduled = ZonedDateTime.ofInstant(rs.timestamp("scheduled").toInstant, UTC),
-      status = Payment.status(rs.string("status"))
+      status = Payment.status(rs.string("status")),
+      opResultCode = rs.intOpt("op_result_code")
     )
 }
 
@@ -115,12 +129,12 @@ case class Payment(id: Option[Long],
                    units: Long,
                    received: ZonedDateTime,
                    scheduled: ZonedDateTime,
-                   status: Payment.Status) {
+                   status: Payment.Status,
+                   opResultCode: Option[Int] = None) {
 
   def asOperation = PaymentOperation(
     destination, issuer.map(i => IssuedAmount(units, Asset(code, i))).getOrElse(NativeAmount(units)), Some(source)
   )
-
 }
 
 object Payment {
@@ -146,5 +160,3 @@ object Payment {
   case object Succeeded extends Status
 
 }
-
-

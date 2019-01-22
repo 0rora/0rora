@@ -16,7 +16,8 @@ libraryDependencies ++= Seq(
   "org.scalikejdbc" %% "scalikejdbc" % "3.3.0",
   "org.scalikejdbc" %% "scalikejdbc-config" % "3.3.0",
   "org.scalikejdbc" %% "scalikejdbc-play-initializer" % "2.6.0-scalikejdbc-3.3",
-//  "org.webjars.npm" % "bulma" % "0.7.2", // one day perhaps
+  "org.webjars.npm" % "bulma" % "0.7.2",
+  "org.webjars" % "font-awesome" % "5.6.3",
   "org.scalatestplus.play" %% "scalatestplus-play" % "3.1.2" % Test
 )
 
