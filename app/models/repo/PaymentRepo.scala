@@ -133,7 +133,6 @@ case class Payment(id: Option[Long],
   def asOperation = PaymentOperation(
     destination, issuer.map(i => IssuedAmount(units, Asset(code, i))).getOrElse(NativeAmount(units)), Some(source)
   )
-
 }
 
 object Payment {
@@ -159,5 +158,3 @@ object Payment {
   case object Succeeded extends Status
 
 }
-
-
