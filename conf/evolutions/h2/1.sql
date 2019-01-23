@@ -9,6 +9,7 @@ CREATE TABLE payments(
     units               NUMERIC NOT NULL,
     received            TIMESTAMP NOT NULL,
     scheduled           TIMESTAMP NOT NULL,
+    submitted           TIMESTAMP,
     status              VARCHAR(9) NOT NULL CHECK (status IN ('pending', 'submitted', 'failed', 'succeeded')),
     op_result_code      SMALLINT CHECK(-9 <= op_result_code and op_result_code <= 0)
 );

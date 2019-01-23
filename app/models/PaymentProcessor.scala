@@ -87,7 +87,7 @@ class PaymentProcessor @Inject()(repo: PaymentRepo,
           val (submittingAccounts, leftOverAccounts) = readyAccounts.splitAt((submittingPayments.size / 100.0).ceil.toInt)
           Logger.debug(s"Processing ${submittingPayments.size}/${payments.size} pending payments via ${submittingAccounts.size} accounts (${submittingAccounts.map(_.sequenceNumber)}")
 
-          repo.submit(submittingPayments.flatMap(_.id))
+          repo.submit(submittingPayments.flatMap(_.id), ZonedDateTime.now)
           Source.fromIterator(() => submittingPayments.iterator)
             .grouped(100)
             .zip(Source.fromIterator(() => submittingAccounts.iterator))
@@ -133,7 +133,6 @@ class PaymentProcessor @Inject()(repo: PaymentRepo,
           case Success(accn) => self ! UpdateAccount(accn.toAccount)
           case Failure(t) => Logger.warn(s"Unable to register account ${kp.accountId}", t)
         }
-
     }
   }
 

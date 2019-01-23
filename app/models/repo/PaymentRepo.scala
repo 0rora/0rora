@@ -35,7 +35,7 @@ class PaymentRepo @Inject()() {
 
   def listScheduled: Seq[Payment] = {
     sql"""
-       select id, source, destination, code, issuer, units, received, scheduled, status, op_result_code
+       select id, source, destination, code, issuer, units, received, scheduled, submitted, status, op_result_code
        from payments
        where status=${Pending.name}
        order by scheduled
@@ -44,7 +44,7 @@ class PaymentRepo @Inject()() {
 
   def listHistoric: Seq[Payment] = {
     sql"""
-       select id, source, destination, code, issuer, units, received, scheduled, status, op_result_code
+       select id, source, destination, code, issuer, units, received, scheduled, submitted, status, op_result_code
        from payments
        where status in ('failed', 'succeeded')
        order by id desc
@@ -53,7 +53,7 @@ class PaymentRepo @Inject()() {
 
   def due: Seq[Payment] = {
     sql"""
-       select id, source, destination, code, issuer, units, received, scheduled, status, op_result_code
+       select id, source, destination, code, issuer, units, received, scheduled, submitted, status, op_result_code
        from payments
        where status='pending'
        and scheduled <= ${ZonedDateTime.now.toInstant}
@@ -75,7 +75,11 @@ class PaymentRepo @Inject()() {
     """.batch(batchParams: _*).apply()
   }
 
-  def submit(ids: Seq[Long]): Unit = updateStatus(ids, Submitted)
+  def submit(ids: Seq[Long], submittedDate: ZonedDateTime): Unit = {
+    sql"""
+        update payments set status=${Submitted.name}, submitted=$submittedDate where id in ($ids)
+    """.update().apply()
+  }
 
   def confirm(ids: Seq[Long]): Unit =
     updateStatusWithOpResult(ids.map(_ -> PaymentSuccess), Succeeded)
@@ -85,7 +89,7 @@ class PaymentRepo @Inject()() {
   def rejectWithOpResult(idsWithResults: Seq[(Long, PaymentResult)]): Unit =
     updateStatusWithOpResult(idsWithResults, Failed)
 
-  def retry(ids: Seq[Long]): Unit = updateStatus(ids, Pending)
+  // def retry(ids: Seq[Long]): Unit = updateStatus(ids, Pending)
 
   def earliestTimeDue: Option[ZonedDateTime] = {
     sql"""select min(scheduled) as next from payments where status='pending'""".map { rs =>
@@ -116,6 +120,7 @@ class PaymentRepo @Inject()() {
       units = rs.long("units"),
       received = ZonedDateTime.ofInstant(rs.timestamp("received").toInstant, UTC),
       scheduled = ZonedDateTime.ofInstant(rs.timestamp("scheduled").toInstant, UTC),
+      submitted = rs.timestampOpt("submitted").map(_.toInstant).map(ZonedDateTime.ofInstant(_, UTC)),
       status = Payment.status(rs.string("status")),
       opResultCode = rs.intOpt("op_result_code")
     )
@@ -129,6 +134,7 @@ case class Payment(id: Option[Long],
                    units: Long,
                    received: ZonedDateTime,
                    scheduled: ZonedDateTime,
+                   submitted: Option[ZonedDateTime],
                    status: Payment.Status,
                    opResultCode: Option[Int] = None) {
 

@@ -38,6 +38,7 @@ class SourcesController @Inject()(cc: MessagesControllerComponents,
         u,
         ZonedDateTime.now,
         schedule.map(ZonedDateTime.parse(_, ISO_OFFSET_DATE_TIME)).getOrElse(ZonedDateTime.now),
+        None,
         Payment.Pending
       )
   }

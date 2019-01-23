@@ -67,6 +67,13 @@ function snackattack(message) {
 const camelToTitle = (camelCase) => camelCase
     .replace(/([A-Z])/g, (match) => ` ${match.toLowerCase()}`);
 
+const formatDate = (obj, field) => {
+    if (obj[field] != null) {
+        let date = new Date(obj[field]);
+        obj[field] = dateFormatter.format(date);
+    }
+};
+
 function loadPayments() {
     const template = $('#payment-template').html();
     $.ajax({
@@ -75,8 +82,8 @@ function loadPayments() {
         success: function(data) {
             for (let i = 0; i < data.length; i++) {
                 console.log(data[i]);
-                let date = new Date(data[i].date);
-                data[i].date = dateFormatter.format(date);
+                formatDate(data[i], "submitted");
+                formatDate(data[i], "scheduled");
                 data[i].status_icon = (data[i].status==="succeeded") ? "fa-check-square" : "fa-exclamation-triangle";
                 data[i].status_icon_class = (data[i].status==="succeeded") ? "has-text-success" : "has-text-warning";
                 data[i].from_short = data[i].from.substring(0, 4) + "…" + data[i].from.substring(50);
@@ -101,8 +108,8 @@ function loadPaymentSchedule() {
         type: 'GET',
         success: function(data) {
             for (let i = 0; i < data.length; i++) {
-                let date = new Date(data[i].date);
-                data[i].date = dateFormatter.format(date);
+                formatDate(data[i], "submitted");
+                formatDate(data[i], "scheduled");
                 data[i].from_short = data[i].from.substring(0, 4) + "…" + data[i].from.substring(50);
                 data[i].to_short = data[i].to.substring(0, 4) + "…" + data[i].to.substring(50);
             }

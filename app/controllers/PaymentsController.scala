@@ -32,6 +32,7 @@ class PaymentsController @Inject()(cc: MessagesControllerComponents,
   private val paymentFields = (p: Payment) =>
     Some((
       p.scheduled.toInstant.toEpochMilli,
+      p.submitted.map(_.toInstant.toEpochMilli),
       p.source.accountId,
       p.destination.accountId,
       p.code,
@@ -41,7 +42,8 @@ class PaymentsController @Inject()(cc: MessagesControllerComponents,
     ))
 
   implicit val paymentWrites: Writes[Payment] = (
-    (JsPath \ "date").write[Long] and
+    (JsPath \ "scheduled").write[Long] and
+    (JsPath \ "submitted").writeNullable[Long] and
     (JsPath \ "from").write[String] and
     (JsPath \ "to").write[String] and
     (JsPath \ "asset").write[String] and

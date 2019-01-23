@@ -20,7 +20,7 @@
                 <tbody>
                     {{ #payments }}
                     <tr class="{{ classes }}">
-                        <td>{{ date }}</td>
+                        <td>{{ submitted }}</td>
                         <td>{{ from_short }} <span class="icon"><i class="fas fa-arrow-right"></i></span> {{ to_short }}</td>
                         <td>{{ units }} {{ asset }}</td>
                         <td><span class="icon {{ status_icon_class }}"><i class="fas {{ status_icon }}"></i></span> {{ status }}</td>
@@ -47,7 +47,7 @@
                 <tbody>
                     {{ #payments }}
                     <tr>
-                        <td>{{ date }}</td>
+                        <td>{{ scheduled }}</td>
                         <td>{{ from_short }} <span class="icon"><i class="fas fa-arrow-right"></i></span> {{ to_short }}</td>
                         <td>{{ units }} {{ asset }}</td>
                     </tr>
