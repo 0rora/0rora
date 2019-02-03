@@ -9,7 +9,7 @@ import models.repo.Payment.{Failed, Pending, Submitted, Succeeded}
 import scalikejdbc.{AutoSession, _}
 import stellar.sdk.model.{Asset, IssuedAmount, NativeAmount}
 import stellar.sdk.model.op.PaymentOperation
-import stellar.sdk.model.result.{PaymentResult, PaymentSuccess}
+import stellar.sdk.model.result.{OperationResult, PaymentResult, PaymentSuccess}
 import stellar.sdk.{KeyPair, PublicKeyOps}
 
 import scala.concurrent.duration._
@@ -35,7 +35,7 @@ class PaymentRepo @Inject()() {
 
   def listScheduled: Seq[Payment] = {
     sql"""
-       select id, source, destination, code, issuer, units, received, scheduled, submitted, status, op_result_code
+       select id, source, destination, code, issuer, units, received, scheduled, submitted, status, op_result
        from payments
        where status=${Pending.name}
        order by scheduled
@@ -44,7 +44,7 @@ class PaymentRepo @Inject()() {
 
   def listHistoric: Seq[Payment] = {
     sql"""
-       select id, source, destination, code, issuer, units, received, scheduled, submitted, status, op_result_code
+       select id, source, destination, code, issuer, units, received, scheduled, submitted, status, op_result
        from payments
        where status in ('failed', 'succeeded')
        order by id desc
@@ -53,7 +53,7 @@ class PaymentRepo @Inject()() {
 
   def due: Seq[Payment] = {
     sql"""
-       select id, source, destination, code, issuer, units, received, scheduled, submitted, status, op_result_code
+       select id, source, destination, code, issuer, units, received, scheduled, submitted, status, op_result
        from payments
        where status='pending'
        and scheduled <= ${ZonedDateTime.now.toInstant}
@@ -66,12 +66,12 @@ class PaymentRepo @Inject()() {
     """.update().apply()
   }
 
-  private def updateStatusWithOpResult(idsWithOpResult: Seq[(Long, PaymentResult)], status: Payment.Status): Unit = {
+  private def updateStatusWithOpResult(idsWithOpResult: Seq[(Long, String)], status: Payment.Status): Unit = {
     val batchParams: Seq[Seq[Any]] = idsWithOpResult
-      .map{ case (id, result) => Seq(status.name, result.opResultCode, id) }
+      .map{ case (id, result) => Seq(status.name, result, id) }
 
     sql"""
-        update payments set status=?, op_result_code=? where id=?
+        update payments set status=?, op_result=? where id=?
     """.batch(batchParams: _*).apply()
   }
 
@@ -82,11 +82,11 @@ class PaymentRepo @Inject()() {
   }
 
   def confirm(ids: Seq[Long]): Unit =
-    updateStatusWithOpResult(ids.map(_ -> PaymentSuccess), Succeeded)
+    updateStatusWithOpResult(ids.map(_ -> "OK"), Succeeded)
 
   def reject(ids: Seq[Long]): Unit = updateStatus(ids, Failed)
 
-  def rejectWithOpResult(idsWithResults: Seq[(Long, PaymentResult)]): Unit =
+  def rejectWithOpResult(idsWithResults: Seq[(Long, String)]): Unit =
     updateStatusWithOpResult(idsWithResults, Failed)
 
   // def retry(ids: Seq[Long]): Unit = updateStatus(ids, Pending)
@@ -122,7 +122,7 @@ class PaymentRepo @Inject()() {
       scheduled = ZonedDateTime.ofInstant(rs.timestamp("scheduled").toInstant, UTC),
       submitted = rs.timestampOpt("submitted").map(_.toInstant).map(ZonedDateTime.ofInstant(_, UTC)),
       status = Payment.status(rs.string("status")),
-      opResultCode = rs.intOpt("op_result_code")
+      opResult = rs.stringOpt("op_result")
     )
 }
 
@@ -136,7 +136,7 @@ case class Payment(id: Option[Long],
                    scheduled: ZonedDateTime,
                    submitted: Option[ZonedDateTime],
                    status: Payment.Status,
-                   opResultCode: Option[Int] = None) {
+                   opResult: Option[String] = None) {
 
   def asOperation = PaymentOperation(
     destination, issuer.map(i => IssuedAmount(units, Asset(code, i))).getOrElse(NativeAmount(units)), Some(source)

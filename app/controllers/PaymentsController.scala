@@ -38,7 +38,7 @@ class PaymentsController @Inject()(cc: MessagesControllerComponents,
       p.code,
       p.units / stroopsInLumen,
       p.status.name,
-      p.opResultCode.flatMap(paymentResultByCode.get).map(_.toString)
+      p.opResult
     ))
 
   implicit val paymentWrites: Writes[Payment] = (

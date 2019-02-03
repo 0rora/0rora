@@ -14,7 +14,7 @@ import play.api.test.Helpers._
  */
 class HomeControllerSpec extends PlaySpec with GuiceOneAppPerTest with Injecting {
 
-//  implicit val ec = new LuxExecutionContext(ActorSystem("test"))
+//  implicit val ec = new OroraExecutionContext(ActorSystem("test"))
 
   "HomeController GET" should {
 

@@ -1,5 +1,5 @@
-name := "luxe"
-organization := "io.github.luxe-app"
+name := "0rora"
+organization := "io.github.0rora"
 
 version := "0.1-SNAPSHOT"
 
@@ -9,7 +9,7 @@ scalaVersion := "2.12.8"
 
 libraryDependencies ++= Seq(
   guice, evolutions, jdbc,
-  "io.github.synesso" %% "scala-stellar-sdk" % "0.5.0",
+  "io.github.synesso" %% "scala-stellar-sdk" % "0.5.1",
   "com.nrinaudo" %% "kantan.csv-generic" % "0.4.0",
   "com.h2database" % "h2" % "1.4.192",
   "org.postgresql" % "postgresql" % "42.2.5",
@@ -21,8 +21,3 @@ libraryDependencies ++= Seq(
   "org.scalatestplus.play" %% "scalatestplus-play" % "3.1.2" % Test
 )
 
-// Adds additional packages into Twirl
-//TwirlKeys.templateImports += "io.github.lux-app.controllers._"
-
-// Adds additional packages into conf/routes
-// play.sbt.routes.RoutesKeys.routesImport += "io.github.lux-app.binders._"

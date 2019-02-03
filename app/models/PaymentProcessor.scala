@@ -25,7 +25,7 @@ class PaymentProcessor @Inject()(repo: PaymentRepo,
                                  system: ActorSystem) {
 
   private val actor = system.actorOf(Props(new ActorDef()))
-  private val signerKey = KeyPair.fromSecretSeed(config.get[String]("luxe.account.secret"))
+  private val signerKey = KeyPair.fromSecretSeed(config.get[String]("0rora.account.secret"))
   private implicit val ec: ExecutionContextExecutor = system.dispatcher
 
   actor ! RegisterAccount(signerKey)
@@ -53,14 +53,13 @@ class PaymentProcessor @Inject()(repo: PaymentRepo,
 
         case ((x: TransactionRejected, ps), account) =>
           x.result match {
-            case TransactionFailure(_, operationResults) =>
+            case r @ TransactionFailure(_, operationResults) =>
               Logger.debug(s"Failure $operationResults")
-              val ko = ps.zip(operationResults.map(_.asInstanceOf[PaymentResult]))
-              self ! RejectPayments(ko, account)
+              self ! RejectPayments(ps, operationResults, account, r.sequenceUpdated)
 
-            case TransactionNotAttempted(reason, _) =>
+            case r @ TransactionNotAttempted(reason, _) =>
               Logger.debug(s"Not attempted because $reason")
-              self ! RejectTransaction(ps, account)
+              self ! RejectTransaction(ps, account, r.sequenceUpdated)
           }
       })
       .to(Sink.ignore)
@@ -107,14 +106,22 @@ class PaymentProcessor @Inject()(repo: PaymentRepo,
         context.become(state(readyAccounts :+ account.withIncSeq, busyAccounts.filterNot(_ == account), nextKnownPaymentDate))
 
       // Mark these payments as failed and handle account
-      case RejectPayments(payments, account) =>
-        repo.rejectWithOpResult(payments.flatMap { case (p, r) => p.id.map(_ -> r)})
-        context.become(state(readyAccounts :+ account.withIncSeq, busyAccounts.filterNot(_ == account), nextKnownPaymentDate))
+      case RejectPayments(payments, opResults, account, updatedSeqNo) =>
+
+        val operationResults = if (opResults.forall(_ == PaymentSuccess)) opResults.map(_ => "OK") else
+          opResults.map {
+            case PaymentSuccess | CreateAccountSuccess => "Batch Failure"
+            case x => x.getClass.getSimpleName.replaceAll("([a-z])([A-Z])", "$1 $2").replaceFirst("\\$$","")
+          }
+        repo.rejectWithOpResult(payments.zip(operationResults).flatMap { case (p, r) => p.id.map(_ -> r)})
+        val account_ = if (updatedSeqNo) account.withIncSeq else account
+        context.become(state(readyAccounts :+ account_, busyAccounts.filterNot(_ == account), nextKnownPaymentDate))
 
       // Mark these payments as failed and handle account
-      case RejectTransaction(payments, account) =>
+      case RejectTransaction(payments, account, updatedSeqNo) =>
         repo.reject(payments.flatMap(_.id))
-        context.become(state(readyAccounts :+ account.withIncSeq, busyAccounts.filterNot(_ == account), nextKnownPaymentDate))
+        val account_ = if (updatedSeqNo) account.withIncSeq else account
+        context.become(state(readyAccounts :+ account_, busyAccounts.filterNot(_ == account), nextKnownPaymentDate))
 
       // Mark these payments for retry and handle account
 /*
@@ -129,7 +136,7 @@ class PaymentProcessor @Inject()(repo: PaymentRepo,
 
       // Fetch details of account
       case RegisterAccount(kp) =>
-        network.account(kp).onComplete{
+        network.account(kp).onComplete {
           case Success(accn) => self ! UpdateAccount(accn.toAccount)
           case Failure(t) => Logger.warn(s"Unable to register account ${kp.accountId}", t)
         }
@@ -140,8 +147,8 @@ class PaymentProcessor @Inject()(repo: PaymentRepo,
   private case object UpdateNextPaymentTime
   private case class RegisterAccount(keyPair: KeyPair)
   private case class Confirm(payments: Seq[Payment], account: Account)
-  private case class RejectPayments(payments: Seq[(Payment, PaymentResult)], account: Account)
-  private case class RejectTransaction(payments: Seq[Payment], account: Account)
+  private case class RejectPayments(payments: Seq[Payment], operationResults: Seq[OperationResult], account: Account, updatedSeqNo: Boolean)
+  private case class RejectTransaction(payments: Seq[Payment], account: Account, updatedSeqNo: Boolean)
   private case class UpdateAccount(accn: Account)
 
 }
