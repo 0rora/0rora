@@ -21,14 +21,13 @@ import scala.util.{Failure, Success}
 
 @Singleton
 class PaymentProcessor @Inject()(repo: PaymentRepo,
-                                 config: Configuration,
+                                 config: AppConfig,
                                  system: ActorSystem) {
 
   private val actor = system.actorOf(Props(new ActorDef()))
-  private val signerKey = KeyPair.fromSecretSeed(config.get[String]("0rora.account.secret"))
   private implicit val ec: ExecutionContextExecutor = system.dispatcher
 
-  actor ! RegisterAccount(signerKey)
+  actor ! RegisterAccount(config.signerKey)
   actor ! UpdateNextPaymentTime
   system.scheduler.schedule(5.seconds, 5.seconds, actor, ProcessPayments)
 
@@ -37,13 +36,13 @@ class PaymentProcessor @Inject()(repo: PaymentRepo,
   class ActorDef() extends Actor {
 
     implicit private val materializer: ActorMaterializer = ActorMaterializer()
-    implicit private val network: Network = TestNetwork
+    implicit private val network: Network = config.network
 
     val paymentSink: Sink[(Seq[Payment], Account), NotUsed] = Flow[(Seq[Payment], Account)]
       .map{ case (ps, account) =>
         val operations = ps.map(_.asOperation)
         Logger.debug(s"Transacting account ${account.publicKey} (seqNo ${account.sequenceNumber})")
-        val txn = Transaction(account, operations).sign(signerKey)
+        val txn = Transaction(account, operations).sign(config.signerKey)
         txn.submit().map(_ -> ps -> account)
       }
       .mapAsync(parallelism = 1)(_.map{
