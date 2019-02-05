@@ -28,14 +28,19 @@ class SourcesController @Inject()(cc: MessagesControllerComponents,
 
   implicit private val mat: ActorMaterializer = ActorMaterializer()
   implicit private val paymentDecoder: RowDecoder[Payment] = RowDecoder.ordered {
-    (s: String, d: String, c: String, i: Option[String], u: Long, schedule: Option[String]) =>
+    (sender: String,
+     destination: String,
+     asset: String,
+     issuer: Option[String],
+     units: Long,
+     schedule: Option[String]) =>
       Payment(
         None,
-        KeyPair.fromAccountId(s),
-        KeyPair.fromAccountId(d),
-        c,
-        i.map(KeyPair.fromAccountId),
-        u,
+        KeyPair.fromAccountId(sender),
+        KeyPair.fromAccountId(destination),
+        asset,
+        issuer.map(KeyPair.fromAccountId),
+        units,
         ZonedDateTime.now,
         schedule.map(ZonedDateTime.parse(_, ISO_OFFSET_DATE_TIME)).getOrElse(ZonedDateTime.now),
         None,
