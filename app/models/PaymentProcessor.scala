@@ -13,7 +13,7 @@ import play.api.{Configuration, Environment, Logger}
 import stellar.sdk.model.response.{TransactionApproved, TransactionRejected}
 import stellar.sdk.model.result._
 import stellar.sdk.model.{Account, Transaction}
-import stellar.sdk.{KeyPair, Network, TestNetwork}
+import stellar.sdk.{KeyPair, Network}
 
 import scala.concurrent.ExecutionContextExecutor
 import scala.concurrent.duration._
@@ -27,7 +27,7 @@ class PaymentProcessor @Inject()(repo: PaymentRepo,
   private val actor = system.actorOf(Props(new ActorDef()))
   private implicit val ec: ExecutionContextExecutor = system.dispatcher
 
-  actor ! RegisterAccount(config.signerKey)
+  config.accounts.values.map(RegisterAccount).foreach(actor ! _)
   actor ! UpdateNextPaymentTime
   system.scheduler.schedule(5.seconds, 5.seconds, actor, ProcessPayments)
 
@@ -41,13 +41,17 @@ class PaymentProcessor @Inject()(repo: PaymentRepo,
     val paymentSink: Sink[(Seq[Payment], Account), NotUsed] = Flow[(Seq[Payment], Account)]
       .map{ case (ps, account) =>
         val operations = ps.map(_.asOperation)
-        Logger.debug(s"Transacting account ${account.publicKey} (seqNo ${account.sequenceNumber})")
-        val txn = Transaction(account, operations).sign(config.signerKey)
+        val signers: Seq[KeyPair] =
+          (account.publicKey +: ps.map(_.source)).map(_.accountId).distinct.flatMap(config.accounts.get)
+        Logger.debug(s"Transacting account ${account.publicKey} (ops=${operations.size}, seqNo=${account.sequenceNumber})")
+//        operations.foreach(op => Logger.debug(s"Operation: $op"))
+//        signers.foreach(s => Logger.debug(s"Signer: ${s.accountId}"))
+        val txn = Transaction(account, operations).sign(signers.head, signers.tail: _*)
         txn.submit().map(_ -> ps -> account)
       }
-      .mapAsync(parallelism = 1)(_.map{
+      .mapAsync(parallelism = config.accounts.size)(_.map{
         case ((_: TransactionApproved, ps), account) =>
-          Logger.debug(s"Successful")
+          Logger.debug(s"Successful: ${ps.size} payments")
           self ! Confirm(ps, account)
 
         case ((x: TransactionRejected, ps), account) =>
@@ -131,6 +135,7 @@ class PaymentProcessor @Inject()(repo: PaymentRepo,
 
       // Add a new account to the pool
       case UpdateAccount(accn) =>
+        Logger.debug(s"Updating $accn")
         context.become(state(accn +: readyAccounts, busyAccounts, nextKnownPaymentDate))
 
       // Fetch details of account

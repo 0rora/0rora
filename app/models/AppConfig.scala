@@ -6,12 +6,13 @@ import javax.inject.{Inject, Singleton}
 import play.api.Configuration
 import stellar.sdk.{KeyPair, Network, PublicNetwork, StandaloneNetwork, TestNetwork}
 
+import scala.collection.JavaConverters._
 import scala.util.{Failure, Try}
 
 @Singleton
-class AppConfig @Inject()(val underlying: Configuration) {
+class AppConfig @Inject()(val conf: Configuration) {
 
-  val network: Network = underlying.get[String]("0rora.horizon") match {
+  val network: Network = conf.get[String]("0rora.horizon") match {
     case "test" => TestNetwork
     case "public" => PublicNetwork
     case s =>
@@ -23,7 +24,9 @@ class AppConfig @Inject()(val underlying: Configuration) {
       StandaloneNetwork(uri)
   }
 
-  val signerKey: KeyPair = KeyPair.fromSecretSeed(underlying.get[String]("0rora.account.secret"))
+  val accounts: Map[String, KeyPair] =
+    conf.underlying.getStringList("0rora.accounts").asScala.map(KeyPair.fromSecretSeed)
+      .map(kp => kp.accountId -> kp).toMap
 
 }
 
