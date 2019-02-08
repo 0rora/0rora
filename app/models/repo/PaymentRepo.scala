@@ -51,12 +51,13 @@ class PaymentRepo @Inject()() {
     """.map(from).list().apply()
   }
 
-  def due: Seq[Payment] = {
+  def due(maxRecords: Int): Seq[Payment] = {
     sql"""
        select id, source, destination, code, issuer, units, received, scheduled, submitted, status, op_result
        from payments
        where status='pending'
        and scheduled <= ${ZonedDateTime.now.toInstant}
+       limit $maxRecords
     """.map(from).list().apply()
   }
 
@@ -89,7 +90,7 @@ class PaymentRepo @Inject()() {
   def rejectWithOpResult(idsWithResults: Seq[(Long, String)]): Unit =
     updateStatusWithOpResult(idsWithResults, Failed)
 
-  // def retry(ids: Seq[Long]): Unit = updateStatus(ids, Pending)
+  def retry(ids: Seq[Long]): Unit = updateStatus(ids, Pending)
 
   def earliestTimeDue: Option[ZonedDateTime] = {
     sql"""select min(scheduled) as next from payments where status='pending'""".map { rs =>
