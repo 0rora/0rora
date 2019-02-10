@@ -4,31 +4,73 @@ _Stellar Payment Manager_
 
 A self-hosted solution for easily making, scheduling, editing and responding to Stellar payments.
 
-[GitHub](https://0rora.github.io/0rora/) [Home](https://0rora.github.io/0rora/)
+The application currently supports only batch & scheduled payments via CSV upload. Full details are available in the 
+[changelog](CHANGELOG.md).
 
 
 ## Installation
 
+1. Unzip the distribution to your preferred path.
+2. Configure your instance.
+
+### Configuration
+
+Create a `production.conf` override file specific for your site, e.g.
+
+```hocon
+include "application"
+
+0rora {
+  horizon = "test"
+  accounts = [
+    "SCTQSBBI7SULSIFMHWIOHPKEMN6JLHZRNUKIUZSN2XYPU4CCCQMGGGCS",
+    "SCVD5GCA3RTIFPDN2RBVLXZGUNTUP7NQN4EYORJPWDXPSQ7EEHNDJUKN",
+    "SA4OT2TPC2XPGOCXHNJP6N2LQIGM4WZE63IIEATA4N5GM6WY2Z6GLSLQ"
+  ]
+}
+
+db {
+  default {
+    driver = org.postgresql.Driver
+    url = "jdbc:postgresql://localhost/orora"
+    username = "ford"
+    password = "pr3fekt"
+  }
+}
+
+play.http.secret.key = "babelfish77"
+```
+
+... and to pass that file as a system property at initialisation:
+
+`bin/0rora -Dconfig.file=/path/to/production.conf`
 
 
+#### Properties
+
+- `0rora.horizon` determines the Horizon instance to connect with. It may be `test`, `public` or the base URL of any 
+    custom Horizon instance. 
+- `0rora.accounts` is an array of secret seeds for accounts that will be both payers and payment channel participants.
+    (Future builds will migrate this sensitive data elsewhere).
+- `db.default` is the JDBC configuration of the application database as per the [ScalikeJDBC documentation](http://scalikejdbc.org/documentation/configuration.html#scalikejdbc-config).
+    At the very least, you will require `db.default.driver` and `db.default.url`.
+- `play.http.secret.key` the [application secret](https://www.playframework.com/documentation/2.7.x/ApplicationSecret)
 
 
 ## Development
 
-### Building
+Please send pull requests and raise issues.
 
-`sbt dist`
+## License
 
+[MIT License](LICENSE.txt)
 
-### Quickstart Docker
+## Changes
 
-`docker run --rm -p9000:9000 -ti --name 0rora -eAPPLICATION_SECRET=foorandombar -eACCOUNT_SEED=S...ABC123 0rora/0rora`
+[Changelog](CHANGELOG.md)
 
-It is necessary to define the environment variables:
+## Credits
 
-* `APPLICATION_SECRET`: Used to secure cryptographic functions with the application. 
-                        It must be the same value for each deployed instance in a production environment.
+[0rora](https://0rora.com/) is created and maintained by [Jem Mawson](https://keybase.io/jem).
 
-
-[![Stellar](https://0rora.github.io/0rora/images/web-ico.png "Stellar Rocket")](https://0rora.github.io/0rora/) [![@0roraPay](https://0rora.github.io/0rora/images/twitter-ico.png)](https://twitter.com/0roraPay)
-![Stellar](https://0rora.github.io/0rora/images/stellar-ico.png "Stellar Rocket") `GBYTSTC7BBN6MFO55M3IFPIZJ2O5UVNZSF357OVIAVMCDVIHULUXEPAY`
+If you are using 0rora, or plan to, please get in touch. 
