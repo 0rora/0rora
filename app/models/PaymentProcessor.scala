@@ -87,6 +87,7 @@ class PaymentProcessor @Inject()(repo: PaymentRepo,
         if (readyAccounts > 0) {
           val payments = repo.due(readyAccounts * 100)
           if (payments.isEmpty) {
+            Logger.debug("No more payments due.")
             context.become(state(repo.earliestTimeDue))
           } else {
             val submittingPaymentsWithAccounts: Seq[(Seq[Payment], Account)] =
