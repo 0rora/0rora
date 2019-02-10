@@ -3,6 +3,9 @@
 All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
+
+## [0.1.0] - 2017-02-10
+
 ### Added
 - List of historical payments under `Payments > History`. (Unpaginated)
 - List of scheduled payments under `Payments > Schedule`. (Also unpaginated)
@@ -10,3 +13,4 @@ All notable changes to this project will be documented in this file.
 - Ability to configure array of sender accounts in `application.conf`
 - Ability to configure Horizon environment, also in `application.conf`.
 - Mock login/out functionality with hard-coded credentials. (`demo/demo`).
+
