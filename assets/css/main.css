@@ -262,17 +262,14 @@ h6 {
 
     h3 {
         font-size: 0.9rem;
-        color: #FF524F;
     }
 
     h4 {
         font-size: 0.75rem;
-        color: #FF524F;
     }
 
     h5 {
         font-size: 0.675rem;
-        color: #FF524F;
     }
 
 }
@@ -3933,5 +3930,5 @@ ul.carrots > li:before {
 }
 
 .future {
-    color: lightgrey;
+    color: grey;
 }
