@@ -80,19 +80,28 @@ function loadPayments() {
         url: '/payments/history',
         type: 'GET',
         success: function(data) {
-            for (let i = 0; i < data.length; i++) {
-                console.log(data[i]);
-                formatDate(data[i], "submitted");
-                formatDate(data[i], "scheduled");
-                data[i].status_icon = (data[i].status==="succeeded") ? "fa-check-square" : "fa-exclamation-triangle";
-                data[i].status_icon_class = (data[i].status==="succeeded") ? "has-text-success" : "has-text-warning";
-                data[i].from_short = data[i].from.substring(0, 4) + "…" + data[i].from.substring(50);
-                data[i].to_short = data[i].to.substring(0, 4) + "…" + data[i].to.substring(50);
-                if (data[i].status === "failed" && data[i].result != null) {
-                    data[i].status = camelToTitle(data[i].result);
+            let ps = data.payments;
+            console.log(ps);
+            for (let i = 0; i < ps.length; i++) {
+                console.log(ps[i]);
+                formatDate(ps[i], "submitted");
+                formatDate(ps[i], "scheduled");
+                ps[i].status_icon = (ps[i].status==="succeeded") ? "fa-check-square" : "fa-exclamation-triangle";
+                ps[i].status_icon_class = (ps[i].status==="succeeded") ? "has-text-success" : "has-text-warning";
+                ps[i].from_short = ps[i].from.substring(0, 4) + "…" + ps[i].from.substring(50);
+                ps[i].to_short = ps[i].to.substring(0, 4) + "…" + ps[i].to.substring(50);
+                if (ps[i].status === "failed" && ps[i].result != null) {
+                    ps[i].status = camelToTitle(ps[i].result);
                 }
             }
-            const rendered = Mustache.render(template, { payments: data });
+            const rendered = Mustache.render(template, {
+                start: 1,
+                end: ps.length,
+                total: data.before + data.after + ps.length,
+                before_link_class: (data.before === 0) ? "has-text-grey-lighter" : "has-text-grey-light",
+                after_link_class: (data.after === 0) ? "has-text-grey-lighter" : "has-text-grey-light",
+                payments: ps
+            });
             $('#payments-list').html(rendered);
         },
         error: function(xhr) {

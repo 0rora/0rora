@@ -8,6 +8,18 @@
     <!--suppress HtmlUnknownAnchorTarget -->
     <section id="section_payments-history" class="hidden" title="Payments > History">
         <script id="payment-template" type="x-tmpl-mustache">
+            <div class="container">
+                <div id="payments-history-controls" class="columns">
+                    <div class="column is-three-quarters">
+                    </div>
+                    <div class="column">
+                        <p class="level-item is-size-7">{{ start }} &#8212; {{ end }} of {{ total }}
+                            <span class="icon"><i class="fas fa-chevron-left {{ before_link_class }}"></i></span>
+                            <span class="icon"><i class="fas fa-chevron-right {{ after_link_class }}"></i></span>
+                        </p>
+                    </div>
+                </div>
+            </div>
             <table class="table is-fullwidth is-narrow is-size-6">
                 <thead>
                     <tr>

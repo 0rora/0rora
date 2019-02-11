@@ -1,7 +1,5 @@
 package controllers
 
-import java.util.Locale
-
 import akka.actor.ActorSystem
 import controllers.actions.AuthenticatedUserAction
 import javax.inject._
@@ -41,6 +39,8 @@ class PaymentsController @Inject()(cc: MessagesControllerComponents,
       p.opResult
     ))
 
+  case class PaymentSubList(before: Int, after: Int, payments: Seq[Payment])
+
   implicit val paymentWrites: Writes[Payment] = (
     (JsPath \ "scheduled").write[Long] and
     (JsPath \ "submitted").writeNullable[Long] and
@@ -52,8 +52,14 @@ class PaymentsController @Inject()(cc: MessagesControllerComponents,
     (JsPath \ "result").writeNullable[String]
     )(unlift(paymentFields))
 
+  implicit val paymentsWrites: Writes[PaymentSubList] = (
+    (JsPath \ "before").write[Int] and
+    (JsPath \ "after").write[Int] and
+    (JsPath \ "payments").write[Seq[Payment]]
+  )(unlift(PaymentSubList.unapply))
+
   def listHistory: Action[AnyContent] = authenticatedUserAction { implicit req =>
-    Ok(Json.toJson(paymentRepo.listHistoric))
+    Ok(Json.toJson(PaymentSubList(0, paymentRepo.countHistoric, paymentRepo.listHistoric())))
   }
 
   def listScheduled: Action[AnyContent] = authenticatedUserAction { implicit req =>

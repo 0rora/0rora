@@ -42,13 +42,18 @@ class PaymentRepo @Inject()() {
     """.map(from).list().apply()
   }
 
-  def listHistoric: Seq[Payment] = {
+  def listHistoric(maxRecords: Int = 100): Seq[Payment] = {
     sql"""
        select id, source, destination, code, issuer, units, received, scheduled, submitted, status, op_result
        from payments
        where status in ('failed', 'succeeded')
        order by id desc
+       limit $maxRecords
     """.map(from).list().apply()
+  }
+
+  def countHistoric: Int = {
+    sql"""select count(1) from payments where status in ('failed', 'succeeded')""".map(_.int(1)).single().apply().get
   }
 
   def due(maxRecords: Int): Seq[Payment] = {

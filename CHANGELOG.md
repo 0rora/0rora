@@ -3,6 +3,8 @@
 All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
+### Added
+- Pagination for payments list pages [#15](https://github.com/0rora/0rora/issues/15)
 
 ## [0.1.0] - 2017-02-10
 
