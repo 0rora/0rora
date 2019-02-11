@@ -11,6 +11,7 @@ import kantan.csv.ops._
 import kantan.csv.{rfc, _}
 import models.PaymentProcessor
 import models.repo.{Payment, PaymentRepo}
+import play.Logger
 import play.api.Configuration
 import play.api.libs.Files
 import play.api.libs.json.Json
@@ -18,6 +19,7 @@ import play.api.mvc._
 import stellar.sdk.KeyPair
 
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.util.{Failure, Success, Try}
 
 class SourcesController @Inject()(cc: MessagesControllerComponents,
                                   config: Configuration,
@@ -26,32 +28,36 @@ class SourcesController @Inject()(cc: MessagesControllerComponents,
                                   implicit val system: ActorSystem) extends MessagesAbstractController(cc) {
 
   implicit private val mat: ActorMaterializer = ActorMaterializer()
-  implicit private val paymentDecoder: RowDecoder[Payment] = RowDecoder.ordered {
+  implicit private val paymentDecoder: RowDecoder[Option[Payment]] = RowDecoder.ordered {
     (sender: String,
      destination: String,
      asset: String,
      issuer: Option[String],
      units: Long,
      schedule: Option[String]) =>
-      Payment(
-        None,
-        KeyPair.fromAccountId(sender),
-        KeyPair.fromAccountId(destination),
-        asset,
-        issuer.map(KeyPair.fromAccountId),
-        units,
-        ZonedDateTime.now,
-        schedule.map(ZonedDateTime.parse(_, ISO_OFFSET_DATE_TIME)).getOrElse(ZonedDateTime.now),
-        None,
-        Payment.Pending
-      )
+      // todo - debug the failure
+      Try {
+        Payment(
+          None,
+          KeyPair.fromAccountId(sender),
+          KeyPair.fromAccountId(destination),
+          asset,
+          issuer.map(KeyPair.fromAccountId),
+          units,
+          ZonedDateTime.now,
+          schedule.map(ZonedDateTime.parse(_, ISO_OFFSET_DATE_TIME)).getOrElse(ZonedDateTime.now),
+          None,
+          Payment.Pending
+        )
+      }.toOption
   }
 
   private def countingSink[T] = Sink.fold[Int, T](0)((acc, _) => acc + 1)
 
   def uploadCSV: Action[MultipartFormData[Files.TemporaryFile]] = Action(parse.multipartFormData).async { request =>
     val path = request.body.files.head.ref.path
-    def iter = path.asCsvReader[Payment](rfc.withoutHeader).collect { case Right(op) => op }.toIterator
+    def iter = path.asCsvReader[Option[Payment]](rfc.withoutHeader).collect { case Right(op) => op }.toIterator
+      .flatten
       .filter(p => p.issuer.nonEmpty || p.code == "XLM")
 
     val (count, _) = Source.fromIterator(() => iter)
