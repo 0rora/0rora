@@ -42,12 +42,15 @@ class PaymentRepo @Inject()() {
     """.map(from).list().apply()
   }
 
-  def listHistoric(maxRecords: Int = 100): Seq[Payment] = {
+  def listHistoric(descending: Boolean = true, fromId: Option[Long] = None, maxRecords: Int = 100): Seq[Payment] = {
+    val startAtClause = if (descending) sqls"id <= ${fromId.getOrElse(Long.MaxValue)}" else sqls"id >= ${fromId.getOrElse(0)}"
+    val order = if (descending) sqls"desc" else sqls"asc"
     sql"""
        select id, source, destination, code, issuer, units, received, scheduled, submitted, status, op_result
        from payments
        where status in ('failed', 'succeeded')
-       order by id desc
+       and $startAtClause
+       order by id $order
        limit $maxRecords
     """.map(from).list().apply()
   }

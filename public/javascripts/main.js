@@ -74,16 +74,20 @@ const formatDate = (obj, field) => {
     }
 };
 
-function loadPayments() {
+function loadPayments(id, key, qty, desc) {
     const template = $('#payment-template').html();
+    console.log(`loadPayments(${id},${key},${qty},${desc})`);
+    if (id === 1 && !desc) {
+        // restart at the top, just in case there's been additions while the user has been paginating.
+        key = Number.MAX_SAFE_INTEGER;
+        desc = true;
+    }
     $.ajax({
-        url: '/payments/history',
+        url: (desc) ? `/payments/historyBefore?k=${key}&q=${qty}&d=${desc}` : `/payments/historyAfter?k=${key}&q=${qty}&d=${desc}`,
         type: 'GET',
         success: function(data) {
             let ps = data.payments;
-            console.log(ps);
             for (let i = 0; i < ps.length; i++) {
-                console.log(ps[i]);
                 formatDate(ps[i], "submitted");
                 formatDate(ps[i], "scheduled");
                 ps[i].status_icon = (ps[i].status==="succeeded") ? "fa-check-square" : "fa-exclamation-triangle";
@@ -95,14 +99,22 @@ function loadPayments() {
                 }
             }
             const rendered = Mustache.render(template, {
-                start: 1,
-                end: ps.length,
-                total: data.before + data.after + ps.length,
-                before_link_class: (data.before === 0) ? "has-text-grey-lighter" : "has-text-grey-light",
-                after_link_class: (data.after === 0) ? "has-text-grey-lighter" : "has-text-grey-light",
+                start: id,
+                end: id + ps.length - 1,
+                total: data.total,
+                cursor_left: (id > 1) ? "" : "cursor-default",
+                cursor_right: (id <= data.total - ps.length) ? "" : "cursor-default",
+                disabled_left: (id > 1) ? "" : "disabled",
+                disabled_right: (id <= data.total - ps.length) ? "" : "disabled",
                 payments: ps
             });
             $('#payments-list').html(rendered);
+            if (id > 1) $('#page-left').click(function() {
+                loadPayments(id - 100, ps[0].id + 1, qty, false)
+            });
+            if (id + ps.length < data.total) $('#page-right').click(function(){
+                loadPayments(id + 100, ps[ps.length - 1].id - 1, qty, true)
+            });
         },
         error: function(xhr) {
             console.log("xhr: ", xhr);
@@ -196,7 +208,7 @@ function switchDashboardFocusTo(section) {
     dashboardFocus = $("#section_" + section);
     dashboardFocus.removeClass('hidden');
     $('.mdc-top-app-bar__title').text(dashboardFocus.attr('title'));
-    if (section === "payments-history") loadPayments();
+    if (section === "payments-history") loadPayments(1, Number.MAX_SAFE_INTEGER, 100, true);
     if (section === "payments-schedule") loadPaymentSchedule();
 }
 

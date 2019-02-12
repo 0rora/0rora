@@ -12,11 +12,16 @@
                 <div id="payments-history-controls" class="columns">
                     <div class="column is-three-quarters">
                     </div>
-                    <div class="column">
-                        <p class="level-item is-size-7">{{ start }} &#8212; {{ end }} of {{ total }}
-                            <span class="icon"><i class="fas fa-chevron-left {{ before_link_class }}"></i></span>
-                            <span class="icon"><i class="fas fa-chevron-right {{ after_link_class }}"></i></span>
-                        </p>
+                    <div class="column columns">
+                        <span class="column is-half is-vertical-centre level-item is-size-7">{{ start }} &#8212; {{ end }} of {{ total }}</span>
+                        <span class="column buttons are-small">
+                            <a id="page-left" class="button icon {{ cursor_left }}" {{ disabled_left }}>
+                                <i class="fas fa-chevron-left"></i>
+                            </a>
+                            <a id="page-right" class="button icon {{ cursor_right }}" {{disabled_right }}>
+                                <i class="fas fa-chevron-right"></i>
+                            </a>
+                        </span>
                     </div>
                 </div>
             </div>

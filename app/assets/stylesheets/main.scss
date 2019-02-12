@@ -112,3 +112,12 @@ tr.payments-list-item td.columnE { width: 15%; }
   -webkit-transition: background-color 1s ease;
   transition: background-color 1s ease;
 }
+
+.cursor-default {
+  cursor: default !important;
+}
+
+.is-vertical-centre {
+  display: flex;
+  align-items: center;
+}

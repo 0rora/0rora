@@ -6,6 +6,10 @@ All notable changes to this project will be documented in this file.
 ### Added
 - Pagination for payments list pages [#15](https://github.com/0rora/0rora/issues/15)
 
+### Fixed
+- DB type of payments.units is BIGINT, not NUMERIC. Decimal places are not used.
+
+
 ## [0.1.0] - 2017-02-10
 
 ### Added

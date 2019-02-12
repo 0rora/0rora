@@ -11,6 +11,8 @@ import play.api.libs.json.{JsPath, Json, Writes}
 import play.api.mvc.{Action, AnyContent, MessagesAbstractController, MessagesControllerComponents}
 import stellar.sdk.model.result._
 
+import scala.concurrent.{ExecutionContext, Future}
+
 @Singleton
 class PaymentsController @Inject()(cc: MessagesControllerComponents,
                                    authenticatedUserAction: AuthenticatedUserAction,
@@ -29,6 +31,7 @@ class PaymentsController @Inject()(cc: MessagesControllerComponents,
 
   private val paymentFields = (p: Payment) =>
     Some((
+      p.id,
       p.scheduled.toInstant.toEpochMilli,
       p.submitted.map(_.toInstant.toEpochMilli),
       p.source.accountId,
@@ -39,9 +42,10 @@ class PaymentsController @Inject()(cc: MessagesControllerComponents,
       p.opResult
     ))
 
-  case class PaymentSubList(before: Int, after: Int, payments: Seq[Payment])
+  case class PaymentSubList(payments: Seq[Payment], total: Int)
 
   implicit val paymentWrites: Writes[Payment] = (
+    (JsPath \ "id").write[Option[Long]] and
     (JsPath \ "scheduled").write[Long] and
     (JsPath \ "submitted").writeNullable[Long] and
     (JsPath \ "from").write[String] and
@@ -53,13 +57,23 @@ class PaymentsController @Inject()(cc: MessagesControllerComponents,
     )(unlift(paymentFields))
 
   implicit val paymentsWrites: Writes[PaymentSubList] = (
-    (JsPath \ "before").write[Int] and
-    (JsPath \ "after").write[Int] and
-    (JsPath \ "payments").write[Seq[Payment]]
+    (JsPath \ "payments").write[Seq[Payment]] and
+    (JsPath \ "total").write[Int]
   )(unlift(PaymentSubList.unapply))
 
-  def listHistory: Action[AnyContent] = authenticatedUserAction { implicit req =>
-    Ok(Json.toJson(PaymentSubList(0, paymentRepo.countHistoric, paymentRepo.listHistoric())))
+  def listHistoryBefore(k: Long, q: Int, d: Boolean): Action[AnyContent] =
+    authenticatedUserAction { implicit req =>
+      val payments = paymentRepo.listHistoric(descending = true, Some(k), q)
+      val paymentsSorted = if (d) payments else payments.reverse
+      val count = paymentRepo.countHistoric
+      Ok(Json.toJson(PaymentSubList(paymentsSorted, count)))
+  }
+
+  def listHistoryAfter(k: Long, q: Int, d: Boolean): Action[AnyContent] = authenticatedUserAction { implicit req =>
+    val payments = paymentRepo.listHistoric(descending = false, Some(k), q)
+    val paymentsSorted = if (d) payments else payments.reverse
+    val count = paymentRepo.countHistoric
+    Ok(Json.toJson(PaymentSubList(paymentsSorted, count)))
   }
 
   def listScheduled: Action[AnyContent] = authenticatedUserAction { implicit req =>

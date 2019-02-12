@@ -11,7 +11,8 @@ GET         /dashboard                controllers.DashboardController.dashboard
 POST        /sources/csv              controllers.SourcesController.uploadCSV
 
 # Data
-GET         /payments/history         controllers.PaymentsController.listHistory
+GET         /payments/historyAfter    controllers.PaymentsController.listHistoryAfter(k: Long, q: Int, d: Boolean)
+GET         /payments/historyBefore   controllers.PaymentsController.listHistoryBefore(k: Long, q: Int, d: Boolean)
 GET         /payments/schedule        controllers.PaymentsController.listScheduled
 
 # Authentication
