@@ -1,5 +1,7 @@
 package controllers
 
+import java.time.{Instant, ZoneId, ZonedDateTime}
+
 import akka.actor.ActorSystem
 import controllers.actions.AuthenticatedUserAction
 import javax.inject._
@@ -10,8 +12,6 @@ import play.api.libs.functional.syntax._
 import play.api.libs.json.{JsPath, Json, Writes}
 import play.api.mvc.{Action, AnyContent, MessagesAbstractController, MessagesControllerComponents}
 import stellar.sdk.model.result._
-
-import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class PaymentsController @Inject()(cc: MessagesControllerComponents,
@@ -28,6 +28,8 @@ class PaymentsController @Inject()(cc: MessagesControllerComponents,
     PaymentSuccess, PaymentMalformed, PaymentUnderfunded, PaymentSourceNoTrust, PaymentSourceNotAuthorised,
     PaymentNoDestination, PaymentDestinationNoTrust, PaymentDestinationNotAuthorised, PaymentDestinationLineFull, PaymentNoIssuer
   ).map(r => r.opResultCode -> r).toMap
+
+  private val UTC: ZoneId = ZoneId.of("UTC")
 
   private val paymentFields = (p: Payment) =>
     Some((
@@ -76,7 +78,20 @@ class PaymentsController @Inject()(cc: MessagesControllerComponents,
     Ok(Json.toJson(PaymentSubList(paymentsSorted, count)))
   }
 
-  def listScheduled: Action[AnyContent] = authenticatedUserAction { implicit req =>
-    Ok(Json.toJson(paymentRepo.listScheduled))
+  def listScheduledBefore(s: Long, k: Long, q: Int, d: Boolean): Action[AnyContent] =
+    authenticatedUserAction { implicit req =>
+      val scheduled = ZonedDateTime.ofInstant(Instant.ofEpochMilli(s), UTC)
+      val payments = paymentRepo.listScheduled(descending = true, Some((scheduled, k)), q)
+      val paymentsSorted = if (d) payments.reverse else payments
+      val count = paymentRepo.countScheduled
+      Ok(Json.toJson(PaymentSubList(paymentsSorted, count)))
+    }
+
+  def listScheduledAfter(s: Long, k: Long, q: Int, d: Boolean): Action[AnyContent] = authenticatedUserAction { implicit req =>
+    val scheduled = ZonedDateTime.ofInstant(Instant.ofEpochMilli(s), UTC)
+    val payments = paymentRepo.listScheduled(descending = false, Some((scheduled, k)), q)
+    val paymentsSorted = if (d) payments.reverse else payments
+    val count = paymentRepo.countScheduled
+    Ok(Json.toJson(PaymentSubList(paymentsSorted, count)))
   }
 }

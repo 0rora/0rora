@@ -13,7 +13,8 @@ POST        /sources/csv              controllers.SourcesController.uploadCSV
 # Data
 GET         /payments/historyAfter    controllers.PaymentsController.listHistoryAfter(k: Long, q: Int, d: Boolean)
 GET         /payments/historyBefore   controllers.PaymentsController.listHistoryBefore(k: Long, q: Int, d: Boolean)
-GET         /payments/schedule        controllers.PaymentsController.listScheduled
+GET         /payments/scheduledAfter  controllers.PaymentsController.listScheduledAfter(s: Long, k: Long, q: Int, d: Boolean)
+GET         /payments/scheduledBefore controllers.PaymentsController.listScheduledBefore(s: Long, k: Long, q: Int, d: Boolean)
 
 # Authentication
 GET         /logout                   controllers.LoggedInController.logout

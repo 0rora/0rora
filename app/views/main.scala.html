@@ -15,10 +15,10 @@
                     <div class="column columns">
                         <span class="column is-half is-vertical-centre level-item is-size-7">{{ start }} &#8212; {{ end }} of {{ total }}</span>
                         <span class="column buttons are-small">
-                            <a id="page-left" class="button icon {{ cursor_left }}" {{ disabled_left }}>
+                            <a id="history-page-left" class="button icon {{ cursor_left }}" {{ disabled_left }}>
                                 <i class="fas fa-chevron-left"></i>
                             </a>
-                            <a id="page-right" class="button icon {{ cursor_right }}" {{disabled_right }}>
+                            <a id="history-page-right" class="button icon {{ cursor_right }}" {{disabled_right }}>
                                 <i class="fas fa-chevron-right"></i>
                             </a>
                         </span>
@@ -37,7 +37,7 @@
                 <tbody>
                     {{ #payments }}
                     <tr class="{{ classes }}">
-                        <td>{{ submitted }}</td>
+                        <td>{{ submitted-fmt }}</td>
                         <td>{{ from_short }} <span class="icon"><i class="fas fa-arrow-right"></i></span> {{ to_short }}</td>
                         <td>{{ units }} {{ asset }}</td>
                         <td><span class="icon {{ status_icon_class }}"><i class="fas {{ status_icon }}"></i></span> {{ status }}</td>
@@ -53,6 +53,23 @@
 
     <section id="section_payments-schedule" class="hidden" title="Payments > Scheduled">
         <script id="payment-schedule-template" type="x-tmpl-mustache">
+            <div class="container">
+                <div id="payments-schedule-controls" class="columns">
+                    <div class="column is-three-quarters">
+                    </div>
+                    <div class="column columns">
+                        <span class="column is-half is-vertical-centre level-item is-size-7">{{ start }} &#8212; {{ end }} of {{ total }}</span>
+                        <span class="column buttons are-small">
+                            <a id="schedule-page-left" class="button icon {{ cursor_left }}" {{ disabled_left }}>
+                                <i class="fas fa-chevron-left"></i>
+                            </a>
+                            <a id="schedule-page-right" class="button icon {{ cursor_right }}" {{disabled_right }}>
+                                <i class="fas fa-chevron-right"></i>
+                            </a>
+                        </span>
+                    </div>
+                </div>
+            </div>
             <table class="table is-fullwidth is-narrow is-size-6">
                 <thead>
                     <tr>
@@ -64,7 +81,7 @@
                 <tbody>
                     {{ #payments }}
                     <tr>
-                        <td>{{ scheduled }}</td>
+                        <td>{{ scheduled-fmt }}</td>
                         <td>{{ from_short }} <span class="icon"><i class="fas fa-arrow-right"></i></span> {{ to_short }}</td>
                         <td>{{ units }} {{ asset }}</td>
                     </tr>

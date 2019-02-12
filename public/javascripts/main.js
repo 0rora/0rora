@@ -70,14 +70,14 @@ const camelToTitle = (camelCase) => camelCase
 const formatDate = (obj, field) => {
     if (obj[field] != null) {
         let date = new Date(obj[field]);
-        obj[field] = dateFormatter.format(date);
+        obj[`${field}-fmt`] = dateFormatter.format(date);
     }
 };
 
 function loadPayments(id, key, qty, desc) {
     const template = $('#payment-template').html();
-    console.log(`loadPayments(${id},${key},${qty},${desc})`);
-    if (id === 1 && !desc) {
+    // console.log(`loadPayments(${id},${key},${qty},${desc})`);
+    if (id === 1) {
         // restart at the top, just in case there's been additions while the user has been paginating.
         key = Number.MAX_SAFE_INTEGER;
         desc = true;
@@ -99,7 +99,7 @@ function loadPayments(id, key, qty, desc) {
                 }
             }
             const rendered = Mustache.render(template, {
-                start: id,
+                start: Math.min(id, data.total),
                 end: id + ps.length - 1,
                 total: data.total,
                 cursor_left: (id > 1) ? "" : "cursor-default",
@@ -109,11 +109,11 @@ function loadPayments(id, key, qty, desc) {
                 payments: ps
             });
             $('#payments-list').html(rendered);
-            if (id > 1) $('#page-left').click(function() {
-                loadPayments(id - 100, ps[0].id + 1, qty, false)
+            if (id > 1) $('#history-page-left').click(function() {
+                loadPayments(id - qty, ps[0].id + 1, qty, false);
             });
-            if (id + ps.length < data.total) $('#page-right').click(function(){
-                loadPayments(id + 100, ps[ps.length - 1].id - 1, qty, true)
+            if (id + ps.length < data.total) $('#history-page-right').click(function(){
+                loadPayments(id + qty, ps[ps.length - 1].id - 1, qty, true);
             });
         },
         error: function(xhr) {
@@ -122,7 +122,57 @@ function loadPayments(id, key, qty, desc) {
     });
 }
 
-function loadPaymentSchedule() {
+function loadPaymentSchedule(date, id, key, qty, desc) {
+    const template = $('#payment-schedule-template').html();
+    // console.log(`loadPaymentSchedule(${date},${id},${key},${qty},${desc})`);
+    if (id === 1) {
+        // restart at the top, just in case there's been additions while the user has been paginating.
+        key = 0;
+        date = (new Date).getTime();
+        desc = false;
+    }
+    $.ajax({
+        url: (desc) ?
+            `/payments/scheduledBefore?s=${date}&k=${key}&q=${qty}&d=${desc}` :
+            `/payments/scheduledAfter?s=${date}&k=${key}&q=${qty}&d=${desc}`,
+        type: 'GET',
+        success: function(data) {
+            let ps = data.payments;
+            let min_id = Math.min.apply(null, ps.map(function(p) { return p.id; }));
+            let max_id = Math.max.apply(null, ps.map(function(p) { return p.id; }));
+            for (let i = 0; i < ps.length; i++) {
+                formatDate(ps[i], "submitted");
+                formatDate(ps[i], "scheduled");
+                ps[i].from_short = ps[i].from.substring(0, 4) + "…" + ps[i].from.substring(50);
+                ps[i].to_short = ps[i].to.substring(0, 4) + "…" + ps[i].to.substring(50);
+            }
+            const rendered = Mustache.render(template, {
+                start: Math.min(id, data.total),
+                end: id + ps.length - 1,
+                total: data.total,
+                cursor_left: (id > 1) ? "" : "cursor-default",
+                cursor_right: (id <= data.total - ps.length) ? "" : "cursor-default",
+                disabled_left: (id > 1) ? "" : "disabled",
+                disabled_right: (id <= data.total - ps.length) ? "" : "disabled",
+                payments: ps
+            });
+            $('#payments-schedule-list').html(rendered);
+            // console.log(`min id = ${min_id}, max_id = ${max_id}`);
+            if (id > 1) $('#schedule-page-left').click(function() {
+                loadPaymentSchedule(ps[0].scheduled, id - qty, min_id - 1, qty, true);
+            });
+            // console.log(`${id} ${ps.length} ${data.total}`);
+            if (id + ps.length < data.total) $('#schedule-page-right').click(function(){
+                loadPaymentSchedule(ps[ps.length - 1].scheduled, id + qty, max_id + 1, qty, false);
+            });
+        },
+        error: function(xhr) {
+            console.log("xhr: ", xhr);
+        }
+    });
+}
+
+function loadPaymentSchedule_old() {
     const template = $('#payment-schedule-template').html();
     $.ajax({
         url: '/payments/schedule',
@@ -209,7 +259,7 @@ function switchDashboardFocusTo(section) {
     dashboardFocus.removeClass('hidden');
     $('.mdc-top-app-bar__title').text(dashboardFocus.attr('title'));
     if (section === "payments-history") loadPayments(1, Number.MAX_SAFE_INTEGER, 100, true);
-    if (section === "payments-schedule") loadPaymentSchedule();
+    if (section === "payments-schedule") loadPaymentSchedule((new Date).getTime(), 1, Number.MAX_SAFE_INTEGER, 100, false);
 }
 
 function hashChanged(e) {

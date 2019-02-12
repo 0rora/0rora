@@ -33,13 +33,22 @@ class PaymentRepo @Inject()() {
     """.batch(params: _*).apply()
   })
 
-  def listScheduled: Seq[Payment] = {
+  def listScheduled(descending: Boolean = true, fromClause: Option[(ZonedDateTime, Long)] = None, maxRecords: Int = 100): Seq[Payment] = {
+    val startAtClause = fromClause match {
+      case Some((scheduled, id)) =>
+        if (descending) sqls"and scheduled <= $scheduled and id <= $id"
+        else sqls"and scheduled >= $scheduled and id >= $id"
+      case _ => sqls""
+    }
+    val order = if (descending) sqls"desc" else sqls"asc"
     sql"""
        select id, source, destination, code, issuer, units, received, scheduled, submitted, status, op_result
        from payments
        where status=${Pending.name}
-       order by scheduled
-    """.map(from).list().apply()
+       $startAtClause
+       order by scheduled $order, id $order
+       limit $maxRecords
+     """.map(from).list().apply()
   }
 
   def listHistoric(descending: Boolean = true, fromId: Option[Long] = None, maxRecords: Int = 100): Seq[Payment] = {
@@ -57,6 +66,10 @@ class PaymentRepo @Inject()() {
 
   def countHistoric: Int = {
     sql"""select count(1) from payments where status in ('failed', 'succeeded')""".map(_.int(1)).single().apply().get
+  }
+
+  def countScheduled: Int = {
+    sql"""select count(1) from payments where status=${Pending.name}""".map(_.int(1)).single().apply().get
   }
 
   def due(maxRecords: Int): Seq[Payment] = {
