@@ -68,6 +68,16 @@ class PaymentRepo @Inject()() {
     sql"""select count(1) from payments where status in ('failed', 'succeeded')""".map(_.int(1)).single().apply().get
   }
 
+  // todo - test (what if id does not exist?)
+//  def countHistoricPriorTo(id: Long): Int = {
+//    sql"""
+//         select count(1) from payments
+//         where status in ('failed', 'succeeded')
+//         and id < $id
+//         and submitted <= (select submitted from payments where id=$id)
+//      """.map(_.int(1)).single().apply().get
+//  }
+
   def countScheduled: Int = {
     sql"""select count(1) from payments where status=${Pending.name}""".map(_.int(1)).single().apply().get
   }
@@ -121,15 +131,41 @@ class PaymentRepo @Inject()() {
     }.single().apply().flatten
   }
 
-  // todo - remove me
-  def durationUntilNextDue: Option[FiniteDuration] = {
-    sql"""select min(scheduled) as next from payments where status='pending'""".map {rs =>
-      Option(rs.timestamp("next")).map { next =>
-        val when = ZonedDateTime.ofInstant(next.toInstant, UTC)
-        val now = ZonedDateTime.now
-        Duration.fromNanos(math.max(0L, java.time.Duration.between(now.toInstant, when.toInstant).toNanos))
-      }
-    }.single().apply().flatten
+  // todo - test
+  def history(limit: Int = 100): Seq[Payment] = {
+    sql"""
+      SELECT id, source, destination, code, issuer, units, received, scheduled, submitted, status, op_result
+      FROM payments
+      WHERE status IN ('succeeded','failed')
+      ORDER BY submitted DESC, id DESC
+      LIMIT $limit;
+    """.map(from).list().apply()
+  }
+
+  // todo - test
+  def historyBefore(id: Long, limit: Int = 100): Seq[Payment] = {
+    sql"""
+      SELECT id, source, destination, code, issuer, units, received, scheduled, submitted, status, op_result
+      FROM payments
+      WHERE status IN ('succeeded','failed')
+      AND id < $id
+      AND submitted <= (SELECT submitted FROM payments WHERE id=$id)
+      ORDER BY submitted DESC, id DESC
+      LIMIT $limit;
+    """.map(from).list().apply()
+  }
+
+  // todo - test
+  def historyAfter(id: Long, limit: Int = 100): Seq[Payment] = {
+    sql"""
+      SELECT id, source, destination, code, issuer, units, received, scheduled, submitted, status, op_result
+      FROM payments
+      WHERE status IN ('succeeded','failed')
+      AND id > $id
+      AND submitted >= (SELECT submitted FROM payments WHERE id=$id)
+      ORDER BY submitted ASC, id ASC
+      LIMIT $limit;
+    """.map(from).list().apply()
   }
 
   private def from(rs: WrappedResultSet): Payment =

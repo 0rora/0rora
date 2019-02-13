@@ -74,19 +74,22 @@ const formatDate = (obj, field) => {
     }
 };
 
-function loadPayments(id, key, qty, desc) {
+function loadPayments(i, key, total=0, forwards=true) {
     const template = $('#payment-template').html();
-    // console.log(`loadPayments(${id},${key},${qty},${desc})`);
-    if (id === 1) {
-        // restart at the top, just in case there's been additions while the user has been paginating.
-        key = Number.MAX_SAFE_INTEGER;
-        desc = true;
-    }
+    console.log(`loadPayments(${i},${key},${forwards})`);
+    let url = (i === 1)
+        ? '/payments/history'                     // first page
+        : forwards
+            ? `/payments/historyBefore?id=${key}` // next page right
+            : `payments/historyAfter?id=${key}`;  // next page left
+
     $.ajax({
-        url: (desc) ? `/payments/historyBefore?k=${key}&q=${qty}&d=${desc}` : `/payments/historyAfter?k=${key}&q=${qty}&d=${desc}`,
+        url: url,
         type: 'GET',
         success: function(data) {
             let ps = data.payments;
+            total = (i === 1) ? data.total : total;
+            console.log(`head=${ps[0].id}, last=${ps[ps.length - 1].id} diff=${ps[0].id - ps[ps.length -1].id} (forwards=${forwards})`);
             for (let i = 0; i < ps.length; i++) {
                 formatDate(ps[i], "submitted");
                 formatDate(ps[i], "scheduled");
@@ -99,21 +102,21 @@ function loadPayments(id, key, qty, desc) {
                 }
             }
             const rendered = Mustache.render(template, {
-                start: Math.min(id, data.total),
-                end: id + ps.length - 1,
-                total: data.total,
-                cursor_left: (id > 1) ? "" : "cursor-default",
-                cursor_right: (id <= data.total - ps.length) ? "" : "cursor-default",
-                disabled_left: (id > 1) ? "" : "disabled",
-                disabled_right: (id <= data.total - ps.length) ? "" : "disabled",
+                start: Math.min(i, total),
+                end: i + ps.length - 1,
+                total: total,
+                cursor_left: (i > 1) ? "" : "cursor-default",
+                cursor_right: (i <= total - ps.length) ? "" : "cursor-default",
+                disabled_left: (i > 1) ? "" : "disabled",
+                disabled_right: (i <= total - ps.length) ? "" : "disabled",
                 payments: ps
             });
             $('#payments-list').html(rendered);
-            if (id > 1) $('#history-page-left').click(function() {
-                loadPayments(id - qty, ps[0].id + 1, qty, false);
+            if (i > 1) $('#history-page-left').click(function() {
+                loadPayments(Math.max(1, i - 100), ps[0].id, total,false);
             });
-            if (id + ps.length < data.total) $('#history-page-right').click(function(){
-                loadPayments(id + qty, ps[ps.length - 1].id - 1, qty, true);
+            if (i + ps.length < total) $('#history-page-right').click(function(){
+                loadPayments(i + ps.length, ps[ps.length - 1].id, total, true);
             });
         },
         error: function(xhr) {
@@ -258,7 +261,7 @@ function switchDashboardFocusTo(section) {
     dashboardFocus = $("#section_" + section);
     dashboardFocus.removeClass('hidden');
     $('.mdc-top-app-bar__title').text(dashboardFocus.attr('title'));
-    if (section === "payments-history") loadPayments(1, Number.MAX_SAFE_INTEGER, 100, true);
+    if (section === "payments-history") loadPayments(1, 0, 0,true);
     if (section === "payments-schedule") loadPaymentSchedule((new Date).getTime(), 1, Number.MAX_SAFE_INTEGER, 100, false);
 }
 

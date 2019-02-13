@@ -63,19 +63,25 @@ class PaymentsController @Inject()(cc: MessagesControllerComponents,
     (JsPath \ "total").write[Int]
   )(unlift(PaymentSubList.unapply))
 
-  def listHistoryBefore(k: Long, q: Int, d: Boolean): Action[AnyContent] =
-    authenticatedUserAction { implicit req =>
-      val payments = paymentRepo.listHistoric(descending = true, Some(k), q)
-      val paymentsSorted = if (d) payments else payments.reverse
-      val count = paymentRepo.countHistoric
-      Ok(Json.toJson(PaymentSubList(paymentsSorted, count)))
+  // todo - test
+  def listHistory(): Action[AnyContent] = authenticatedUserAction { implicit req =>
+    val payments = paymentRepo.history()
+    val count = paymentRepo.countHistoric
+    Ok(Json.toJson(PaymentSubList(payments, count)))
   }
 
-  def listHistoryAfter(k: Long, q: Int, d: Boolean): Action[AnyContent] = authenticatedUserAction { implicit req =>
-    val payments = paymentRepo.listHistoric(descending = false, Some(k), q)
-    val paymentsSorted = if (d) payments else payments.reverse
+  // todo -test
+  def listHistoryBefore(id: Long): Action[AnyContent] = authenticatedUserAction { implicit req =>
+    val payments = paymentRepo.historyBefore(id)
     val count = paymentRepo.countHistoric
-    Ok(Json.toJson(PaymentSubList(paymentsSorted, count)))
+    Ok(Json.toJson(PaymentSubList(payments, count)))
+  }
+
+  // todo -test
+  def listHistoryAfter(id: Long): Action[AnyContent] = authenticatedUserAction { implicit req =>
+    val payments = paymentRepo.historyAfter(id)
+    val count = paymentRepo.countHistoric
+    Ok(Json.toJson(PaymentSubList(payments.reverse, count)))
   }
 
   def listScheduledBefore(s: Long, k: Long, q: Int, d: Boolean): Action[AnyContent] =
