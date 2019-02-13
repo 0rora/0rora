@@ -44,6 +44,7 @@ class PaymentsController @Inject()(cc: MessagesControllerComponents,
       p.opResult
     ))
 
+  // todo - total should be optional
   case class PaymentSubList(payments: Seq[Payment], total: Int)
 
   implicit val paymentWrites: Writes[Payment] = (
@@ -73,31 +74,31 @@ class PaymentsController @Inject()(cc: MessagesControllerComponents,
   // todo -test
   def listHistoryBefore(id: Long): Action[AnyContent] = authenticatedUserAction { implicit req =>
     val payments = paymentRepo.historyBefore(id)
-    val count = paymentRepo.countHistoric
-    Ok(Json.toJson(PaymentSubList(payments, count)))
+    Ok(Json.toJson(PaymentSubList(payments, 0)))
   }
 
   // todo -test
   def listHistoryAfter(id: Long): Action[AnyContent] = authenticatedUserAction { implicit req =>
     val payments = paymentRepo.historyAfter(id)
-    val count = paymentRepo.countHistoric
-    Ok(Json.toJson(PaymentSubList(payments.reverse, count)))
+    Ok(Json.toJson(PaymentSubList(payments.reverse, 0)))
   }
 
-  def listScheduledBefore(s: Long, k: Long, q: Int, d: Boolean): Action[AnyContent] =
-    authenticatedUserAction { implicit req =>
-      val scheduled = ZonedDateTime.ofInstant(Instant.ofEpochMilli(s), UTC)
-      val payments = paymentRepo.listScheduled(descending = true, Some((scheduled, k)), q)
-      val paymentsSorted = if (d) payments.reverse else payments
-      val count = paymentRepo.countScheduled
-      Ok(Json.toJson(PaymentSubList(paymentsSorted, count)))
-    }
-
-  def listScheduledAfter(s: Long, k: Long, q: Int, d: Boolean): Action[AnyContent] = authenticatedUserAction { implicit req =>
-    val scheduled = ZonedDateTime.ofInstant(Instant.ofEpochMilli(s), UTC)
-    val payments = paymentRepo.listScheduled(descending = false, Some((scheduled, k)), q)
-    val paymentsSorted = if (d) payments.reverse else payments
+  // todo - test
+  def listScheduled(): Action[AnyContent] = authenticatedUserAction { implicit req =>
+    val payments = paymentRepo.scheduled()
     val count = paymentRepo.countScheduled
-    Ok(Json.toJson(PaymentSubList(paymentsSorted, count)))
+    Ok(Json.toJson(PaymentSubList(payments, count)))
+  }
+
+  // todo - test
+  def listScheduledBefore(id: Long): Action[AnyContent] = authenticatedUserAction { implicit req =>
+    val payments = paymentRepo.scheduledBefore(id)
+    Ok(Json.toJson(PaymentSubList(payments.reverse, 0)))
+  }
+
+  // todo - test
+  def listScheduledAfter(id: Long): Action[AnyContent] = authenticatedUserAction { implicit req =>
+    val payments = paymentRepo.scheduledAfter(id)
+    Ok(Json.toJson(PaymentSubList(payments, 0)))
   }
 }

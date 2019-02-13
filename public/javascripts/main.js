@@ -81,7 +81,7 @@ function loadPayments(i, key, total=0, forwards=true) {
         ? '/payments/history'                     // first page
         : forwards
             ? `/payments/historyBefore?id=${key}` // next page right
-            : `payments/historyAfter?id=${key}`;  // next page left
+            : `/payments/historyAfter?id=${key}`; // next page left
 
     $.ajax({
         url: url,
@@ -125,24 +125,23 @@ function loadPayments(i, key, total=0, forwards=true) {
     });
 }
 
-function loadPaymentSchedule(date, id, key, qty, desc) {
+function loadPaymentSchedule(i, key, total=0, forwards=true) {
     const template = $('#payment-schedule-template').html();
-    // console.log(`loadPaymentSchedule(${date},${id},${key},${qty},${desc})`);
-    if (id === 1) {
-        // restart at the top, just in case there's been additions while the user has been paginating.
-        key = 0;
-        date = (new Date).getTime();
-        desc = false;
-    }
+
+    let url = (i === 1)
+        ? '/payments/scheduled'                      // first page
+        : forwards
+            ? `/payments/scheduledAfter?id=${key}`   // next page right
+            : `/payments/scheduledBefore?id=${key}`; // next page left
+
     $.ajax({
-        url: (desc) ?
-            `/payments/scheduledBefore?s=${date}&k=${key}&q=${qty}&d=${desc}` :
-            `/payments/scheduledAfter?s=${date}&k=${key}&q=${qty}&d=${desc}`,
+        url: url,
         type: 'GET',
         success: function(data) {
+            console.log(data);
+            total = (i === 1) ? data.total : total;
+            console.log(total);
             let ps = data.payments;
-            let min_id = Math.min.apply(null, ps.map(function(p) { return p.id; }));
-            let max_id = Math.max.apply(null, ps.map(function(p) { return p.id; }));
             for (let i = 0; i < ps.length; i++) {
                 formatDate(ps[i], "submitted");
                 formatDate(ps[i], "scheduled");
@@ -150,23 +149,21 @@ function loadPaymentSchedule(date, id, key, qty, desc) {
                 ps[i].to_short = ps[i].to.substring(0, 4) + "…" + ps[i].to.substring(50);
             }
             const rendered = Mustache.render(template, {
-                start: Math.min(id, data.total),
-                end: id + ps.length - 1,
-                total: data.total,
-                cursor_left: (id > 1) ? "" : "cursor-default",
-                cursor_right: (id <= data.total - ps.length) ? "" : "cursor-default",
-                disabled_left: (id > 1) ? "" : "disabled",
-                disabled_right: (id <= data.total - ps.length) ? "" : "disabled",
+                start: Math.min(i, total),
+                end: i + ps.length - 1,
+                total: total,
+                cursor_left: (i > 1) ? "" : "cursor-default",
+                cursor_right: (i <= total - ps.length) ? "" : "cursor-default",
+                disabled_left: (i > 1) ? "" : "disabled",
+                disabled_right: (i <= total - ps.length) ? "" : "disabled",
                 payments: ps
             });
             $('#payments-schedule-list').html(rendered);
-            // console.log(`min id = ${min_id}, max_id = ${max_id}`);
-            if (id > 1) $('#schedule-page-left').click(function() {
-                loadPaymentSchedule(ps[0].scheduled, id - qty, min_id - 1, qty, true);
+            if (i > 1) $('#schedule-page-left').click(function() {
+                loadPaymentSchedule(Math.max(1, i - 100), ps[0].id, total, false);
             });
-            // console.log(`${id} ${ps.length} ${data.total}`);
-            if (id + ps.length < data.total) $('#schedule-page-right').click(function(){
-                loadPaymentSchedule(ps[ps.length - 1].scheduled, id + qty, max_id + 1, qty, false);
+            if (i + ps.length < total) $('#schedule-page-right').click(function(){
+                loadPaymentSchedule(i + ps.length, ps[ps.length - 1].id, total, true);
             });
         },
         error: function(xhr) {
@@ -262,7 +259,7 @@ function switchDashboardFocusTo(section) {
     dashboardFocus.removeClass('hidden');
     $('.mdc-top-app-bar__title').text(dashboardFocus.attr('title'));
     if (section === "payments-history") loadPayments(1, 0, 0,true);
-    if (section === "payments-schedule") loadPaymentSchedule((new Date).getTime(), 1, Number.MAX_SAFE_INTEGER, 100, false);
+    if (section === "payments-schedule") loadPaymentSchedule(1, 0, false);
 }
 
 function hashChanged(e) {
