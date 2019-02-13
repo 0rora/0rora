@@ -76,7 +76,7 @@ const formatDate = (obj, field) => {
 
 function loadPayments(i, key, total=0, forwards=true) {
     const template = $('#payment-template').html();
-    console.log(`loadPayments(${i},${key},${forwards})`);
+    // console.log(`loadPayments(${i},${key},${forwards})`);
     let url = (i === 1)
         ? '/payments/history'                     // first page
         : forwards
@@ -89,7 +89,6 @@ function loadPayments(i, key, total=0, forwards=true) {
         success: function(data) {
             let ps = data.payments;
             total = (i === 1) ? data.total : total;
-            console.log(`head=${ps[0].id}, last=${ps[ps.length - 1].id} diff=${ps[0].id - ps[ps.length -1].id} (forwards=${forwards})`);
             for (let i = 0; i < ps.length; i++) {
                 formatDate(ps[i], "submitted");
                 formatDate(ps[i], "scheduled");
@@ -138,9 +137,7 @@ function loadPaymentSchedule(i, key, total=0, forwards=true) {
         url: url,
         type: 'GET',
         success: function(data) {
-            console.log(data);
             total = (i === 1) ? data.total : total;
-            console.log(total);
             let ps = data.payments;
             for (let i = 0; i < ps.length; i++) {
                 formatDate(ps[i], "submitted");
