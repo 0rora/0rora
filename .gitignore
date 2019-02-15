@@ -9,3 +9,4 @@ target
 gradle*
 .g8
 build.gradle
+.DS_Store
