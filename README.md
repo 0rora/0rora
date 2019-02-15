@@ -2,6 +2,8 @@
 
 _Stellar Payment Manager_
 
+[![Travis](https://travis-ci.org/0rora/0rora.svg?branch=master)](https://travis-ci.org/0rora/0rora)
+
 A self-hosted solution for easily making, scheduling, editing and responding to Stellar payments.
 
 The application currently supports only batch & scheduled payments via CSV upload. Full details are available in the 
