@@ -25,6 +25,7 @@ class PaymentProcessor @Inject()(repo: PaymentRepo,
                                  config: AppConfig,
                                  system: ActorSystem) {
 
+  private val logger = Logger("payment-processor")
   private val actor = system.actorOf(Props(new ActorDef()))
   private implicit val ec: ExecutionContextExecutor = system.dispatcher
 
@@ -46,23 +47,23 @@ class PaymentProcessor @Inject()(repo: PaymentRepo,
         val operations = ps.map(_.asOperation)
         val signers: Seq[KeyPair] =
           (account.publicKey +: ps.map(_.source)).map(_.accountId).distinct.flatMap(config.accounts.get)
-        Logger.debug(s"[${account.publicKey.accountId}] transacting (ops=${operations.size}, seqNo=${account.sequenceNumber})")
+        logger.debug(s"[${account.publicKey.accountId}] transacting (ops=${operations.size}, seqNo=${account.sequenceNumber})")
         val txn = Transaction(account, operations).sign(signers.head, signers.tail: _*)
         txn.submit().map(_ -> ps -> account)
       }
       .mapAsync(parallelism = config.accounts.size)(_.map{
         case ((_: TransactionApproved, ps), account) =>
-          Logger.debug(s"[${account.publicKey.accountId}] Successful ${ps.size} payments")
+          logger.debug(s"[${account.publicKey.accountId}] Successful ${ps.size} payments")
           self ! Confirm(ps, account)
 
         case ((x: TransactionRejected, ps), account) =>
           x.result match {
             case r @ TransactionFailure(_, operationResults) =>
-              Logger.debug(s"[${account.publicKey.accountId}] Failure  - ${x.detail} - $operationResults")
+              logger.debug(s"[${account.publicKey.accountId}] Failure  - ${x.detail} - $operationResults")
               self ! RejectPayments(ps, operationResults, account, r.sequenceUpdated)
 
             case r @ TransactionNotAttempted(reason, _) =>
-              Logger.debug(s"[${account.publicKey.accountId}] Not attempted because $reason")
+              logger.debug(s"[${account.publicKey.accountId}] Not attempted because $reason")
               reason match {
                 case InsufficientBalance =>
                   self ! RetryTransaction(ps, account)
@@ -87,7 +88,7 @@ class PaymentProcessor @Inject()(repo: PaymentRepo,
         if (readyAccounts > 0) {
           val payments = repo.due(readyAccounts * 100)
           if (payments.isEmpty) {
-            Logger.debug("No more payments due.")
+            logger.debug("No more payments due.")
             context.become(state(repo.earliestTimeDue))
           } else {
             val submittingPaymentsWithAccounts: Seq[(Seq[Payment], Account)] =
@@ -139,10 +140,10 @@ class PaymentProcessor @Inject()(repo: PaymentRepo,
 
       // Fetch details of account
       case RegisterAccount(kp) =>
-        Logger.debug(s"[${kp.accountId}] details being obtained from Horizon.")
+        logger.debug(s"[${kp.accountId}] details being obtained from Horizon.")
         network.account(kp).onComplete {
           case Success(accn) => self ! UpdateAccount(accn.toAccount)
-          case Failure(t) => Logger.warn(s"Unable to register account ${kp.accountId}", t)
+          case Failure(t) => logger.warn(s"Unable to register account ${kp.accountId}", t)
         }
     }
   }
@@ -160,6 +161,6 @@ class PaymentProcessor @Inject()(repo: PaymentRepo,
 
 class PaymentProcessorModule extends Module {
   def bindings(env: Environment, config: Configuration): Seq[Binding[_]] =
-    Seq(bind(classOf[PaymentProcessor]).toSelf.eagerly())
+    Seq(play.api.inject.bind[PaymentProcessor].toSelf.eagerly())
 }
 

@@ -1,13 +1,10 @@
 package controllers
 
-import java.time.{Instant, ZoneId, ZonedDateTime}
+import java.time.ZoneId
 
-import akka.actor.ActorSystem
 import controllers.actions.AuthenticatedUserAction
 import javax.inject._
-import models.PaymentProcessor
 import models.repo.{Payment, PaymentRepo}
-import play.api.Configuration
 import play.api.libs.functional.syntax._
 import play.api.libs.json.{JsPath, Json, Writes}
 import play.api.mvc.{Action, AnyContent, MessagesAbstractController, MessagesControllerComponents}
@@ -16,11 +13,7 @@ import stellar.sdk.model.result._
 @Singleton
 class PaymentsController @Inject()(cc: MessagesControllerComponents,
                                    authenticatedUserAction: AuthenticatedUserAction,
-                                   paymentRepo: PaymentRepo,
-                                   processor: PaymentProcessor,
-                                   config: Configuration,
-                                   system: ActorSystem
-                                  ) extends MessagesAbstractController(cc) {
+                                   paymentRepo: PaymentRepo) extends MessagesAbstractController(cc) {
 
   private val stroopsInLumen = 10000000.0
 
@@ -44,9 +37,6 @@ class PaymentsController @Inject()(cc: MessagesControllerComponents,
       p.opResult
     ))
 
-  // todo - total should be optional
-  case class PaymentSubList(payments: Seq[Payment], total: Option[Int] = None)
-
   implicit val paymentWrites: Writes[Payment] = (
     (JsPath \ "id").write[Option[Long]] and
     (JsPath \ "scheduled").write[Long] and
@@ -64,7 +54,6 @@ class PaymentsController @Inject()(cc: MessagesControllerComponents,
     (JsPath \ "total").write[Option[Int]]
   )(unlift(PaymentSubList.unapply))
 
-  // todo - test
   def listHistory(): Action[AnyContent] = authenticatedUserAction { implicit req =>
     val payments = paymentRepo.history()
     val count = paymentRepo.countHistoric
@@ -102,3 +91,6 @@ class PaymentsController @Inject()(cc: MessagesControllerComponents,
     Ok(Json.toJson(PaymentSubList(payments)))
   }
 }
+
+case class PaymentSubList(payments: Seq[Payment], total: Option[Int] = None)
+
