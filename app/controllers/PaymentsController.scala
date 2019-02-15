@@ -60,19 +60,16 @@ class PaymentsController @Inject()(cc: MessagesControllerComponents,
     Ok(Json.toJson(PaymentSubList(payments, Some(count))))
   }
 
-  // todo -test
   def listHistoryBefore(id: Long): Action[AnyContent] = authenticatedUserAction { implicit req =>
     val payments = paymentRepo.historyBefore(id)
     Ok(Json.toJson(PaymentSubList(payments)))
   }
 
-  // todo -test
   def listHistoryAfter(id: Long): Action[AnyContent] = authenticatedUserAction { implicit req =>
     val payments = paymentRepo.historyAfter(id)
     Ok(Json.toJson(PaymentSubList(payments.reverse)))
   }
 
-  // todo - test
   def listScheduled(): Action[AnyContent] = authenticatedUserAction { implicit req =>
     val payments = paymentRepo.scheduled()
     val count = paymentRepo.countScheduled

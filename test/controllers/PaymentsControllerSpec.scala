@@ -96,4 +96,20 @@ class PaymentsControllerSpec(implicit ec: ExecutionEnv) extends PlaySpecificatio
       paymentsSubList.payments must containTheSameElementsAs(ps.take(100).map(p => p.copy(received = p.scheduled)))
     }
   }
+
+  "GET listScheduled" should {
+
+    "return scheduled payment window and total count" >> prop { (ps: Seq[Payment], total: Int) =>
+      val paymentRepo = mock[PaymentRepo]
+      paymentRepo.scheduled() returns ps.take(100)
+      paymentRepo.countScheduled returns total
+      val controller = new PaymentsController(Stubs.stubMessagesControllerComponents(), authUserAction, paymentRepo)
+      val result = controller.listScheduled().apply(FakeRequest().withSession(SessionUsernameKey -> "anyone"))
+      val bodyText: String = contentAsString(result)
+      val JsSuccess(paymentsSubList, _) = Json.fromJson[PaymentSubList](Json.parse(bodyText))
+
+      paymentsSubList.total must beSome(total)
+      paymentsSubList.payments must containTheSameElementsAs(ps.take(100).map(p => p.copy(received = p.scheduled)))
+    }.setGen2(Gen.posNum[Int])
+  }
 }
