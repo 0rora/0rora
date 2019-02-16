@@ -112,4 +112,32 @@ class PaymentsControllerSpec(implicit ec: ExecutionEnv) extends PlaySpecificatio
       paymentsSubList.payments must containTheSameElementsAs(ps.take(100).map(p => p.copy(received = p.scheduled)))
     }.setGen2(Gen.posNum[Int])
   }
+
+  "GET listScheduledBefore" should {
+
+    "return scheduled payment window and no count" >> prop { (ps: Seq[Payment], id: Int) =>
+      val paymentRepo = mock[PaymentRepo]
+      paymentRepo.scheduledBefore(id) returns ps.take(100)
+      val controller = new PaymentsController(Stubs.stubMessagesControllerComponents(), authUserAction, paymentRepo)
+      val result = controller.listScheduledBefore(id).apply(FakeRequest().withSession(SessionUsernameKey -> "anyone"))
+      val bodyText: String = contentAsString(result)
+      val JsSuccess(paymentsSubList, _) = Json.fromJson[PaymentSubList](Json.parse(bodyText))
+
+      paymentsSubList.payments must containTheSameElementsAs(ps.take(100).map(p => p.copy(received = p.scheduled)))
+    }.setGen2(Gen.posNum[Int])
+  }
+
+  "GET listScheduledAfter" should {
+
+    "return scheduled payment window and no count" >> prop { (ps: Seq[Payment], id: Int) =>
+      val paymentRepo = mock[PaymentRepo]
+      paymentRepo.scheduledAfter(id) returns ps.take(100)
+      val controller = new PaymentsController(Stubs.stubMessagesControllerComponents(), authUserAction, paymentRepo)
+      val result = controller.listScheduledAfter(id).apply(FakeRequest().withSession(SessionUsernameKey -> "anyone"))
+      val bodyText: String = contentAsString(result)
+      val JsSuccess(paymentsSubList, _) = Json.fromJson[PaymentSubList](Json.parse(bodyText))
+
+      paymentsSubList.payments must containTheSameElementsAs(ps.take(100).map(p => p.copy(received = p.scheduled)))
+    }.setGen2(Gen.posNum[Int])
+  }
 }
