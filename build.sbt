@@ -1,5 +1,6 @@
 name := "0rora"
 organization := "io.github.0rora"
+maintainer := "keybase.io/jem"
 
 version := "0.1.1"
 
