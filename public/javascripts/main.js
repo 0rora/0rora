@@ -70,30 +70,53 @@ const camelToTitle = (camelCase) => camelCase
 const formatDate = (obj, field) => {
     if (obj[field] != null) {
         let date = new Date(obj[field]);
-        obj[field] = dateFormatter.format(date);
+        obj[`${field}-fmt`] = dateFormatter.format(date);
     }
 };
 
-function loadPayments() {
+function loadPayments(i, key, total=0, forwards=true) {
     const template = $('#payment-template').html();
+    // console.log(`loadPayments(${i},${key},${forwards})`);
+    let url = (i === 1)
+        ? '/payments/history'                     // first page
+        : forwards
+            ? `/payments/historyBefore?id=${key}` // next page right
+            : `/payments/historyAfter?id=${key}`; // next page left
+
     $.ajax({
-        url: '/payments/history',
+        url: url,
         type: 'GET',
         success: function(data) {
-            for (let i = 0; i < data.length; i++) {
-                console.log(data[i]);
-                formatDate(data[i], "submitted");
-                formatDate(data[i], "scheduled");
-                data[i].status_icon = (data[i].status==="succeeded") ? "fa-check-square" : "fa-exclamation-triangle";
-                data[i].status_icon_class = (data[i].status==="succeeded") ? "has-text-success" : "has-text-warning";
-                data[i].from_short = data[i].from.substring(0, 4) + "…" + data[i].from.substring(50);
-                data[i].to_short = data[i].to.substring(0, 4) + "…" + data[i].to.substring(50);
-                if (data[i].status === "failed" && data[i].result != null) {
-                    data[i].status = camelToTitle(data[i].result);
+            let ps = data.payments;
+            total = (i === 1) ? data.total : total;
+            for (let i = 0; i < ps.length; i++) {
+                formatDate(ps[i], "submitted");
+                formatDate(ps[i], "scheduled");
+                ps[i].status_icon = (ps[i].status==="succeeded") ? "fa-check-square" : "fa-exclamation-triangle";
+                ps[i].status_icon_class = (ps[i].status==="succeeded") ? "has-text-success" : "has-text-warning";
+                ps[i].from_short = ps[i].from.substring(0, 4) + "…" + ps[i].from.substring(50);
+                ps[i].to_short = ps[i].to.substring(0, 4) + "…" + ps[i].to.substring(50);
+                if (ps[i].status === "failed" && ps[i].result != null) {
+                    ps[i].status = camelToTitle(ps[i].result);
                 }
             }
-            const rendered = Mustache.render(template, { payments: data });
+            const rendered = Mustache.render(template, {
+                start: Math.min(i, total),
+                end: i + ps.length - 1,
+                total: total,
+                cursor_left: (i > 1) ? "" : "cursor-default",
+                cursor_right: (i <= total - ps.length) ? "" : "cursor-default",
+                disabled_left: (i > 1) ? "" : "disabled",
+                disabled_right: (i <= total - ps.length) ? "" : "disabled",
+                payments: ps
+            });
             $('#payments-list').html(rendered);
+            if (i > 1) $('#history-page-left').click(function() {
+                loadPayments(Math.max(1, i - 100), ps[0].id, total,false);
+            });
+            if (i + ps.length < total) $('#history-page-right').click(function(){
+                loadPayments(i + ps.length, ps[ps.length - 1].id, total, true);
+            });
         },
         error: function(xhr) {
             console.log("xhr: ", xhr);
@@ -101,7 +124,52 @@ function loadPayments() {
     });
 }
 
-function loadPaymentSchedule() {
+function loadPaymentSchedule(i, key, total=0, forwards=true) {
+    const template = $('#payment-schedule-template').html();
+
+    let url = (i === 1)
+        ? '/payments/scheduled'                      // first page
+        : forwards
+            ? `/payments/scheduledAfter?id=${key}`   // next page right
+            : `/payments/scheduledBefore?id=${key}`; // next page left
+
+    $.ajax({
+        url: url,
+        type: 'GET',
+        success: function(data) {
+            total = (i === 1) ? data.total : total;
+            let ps = data.payments;
+            for (let i = 0; i < ps.length; i++) {
+                formatDate(ps[i], "submitted");
+                formatDate(ps[i], "scheduled");
+                ps[i].from_short = ps[i].from.substring(0, 4) + "…" + ps[i].from.substring(50);
+                ps[i].to_short = ps[i].to.substring(0, 4) + "…" + ps[i].to.substring(50);
+            }
+            const rendered = Mustache.render(template, {
+                start: Math.min(i, total),
+                end: i + ps.length - 1,
+                total: total,
+                cursor_left: (i > 1) ? "" : "cursor-default",
+                cursor_right: (i <= total - ps.length) ? "" : "cursor-default",
+                disabled_left: (i > 1) ? "" : "disabled",
+                disabled_right: (i <= total - ps.length) ? "" : "disabled",
+                payments: ps
+            });
+            $('#payments-schedule-list').html(rendered);
+            if (i > 1) $('#schedule-page-left').click(function() {
+                loadPaymentSchedule(Math.max(1, i - 100), ps[0].id, total, false);
+            });
+            if (i + ps.length < total) $('#schedule-page-right').click(function(){
+                loadPaymentSchedule(i + ps.length, ps[ps.length - 1].id, total, true);
+            });
+        },
+        error: function(xhr) {
+            console.log("xhr: ", xhr);
+        }
+    });
+}
+
+function loadPaymentSchedule_old() {
     const template = $('#payment-schedule-template').html();
     $.ajax({
         url: '/payments/schedule',
@@ -187,8 +255,8 @@ function switchDashboardFocusTo(section) {
     dashboardFocus = $("#section_" + section);
     dashboardFocus.removeClass('hidden');
     $('.mdc-top-app-bar__title').text(dashboardFocus.attr('title'));
-    if (section === "payments-history") loadPayments();
-    if (section === "payments-schedule") loadPaymentSchedule();
+    if (section === "payments-history") loadPayments(1, 0, 0,true);
+    if (section === "payments-schedule") loadPaymentSchedule(1, 0, false);
 }
 
 function hashChanged(e) {

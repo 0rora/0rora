@@ -1,13 +1,10 @@
 package controllers
 
-import java.util.Locale
+import java.time.ZoneId
 
-import akka.actor.ActorSystem
 import controllers.actions.AuthenticatedUserAction
 import javax.inject._
-import models.PaymentProcessor
 import models.repo.{Payment, PaymentRepo}
-import play.api.Configuration
 import play.api.libs.functional.syntax._
 import play.api.libs.json.{JsPath, Json, Writes}
 import play.api.mvc.{Action, AnyContent, MessagesAbstractController, MessagesControllerComponents}
@@ -16,11 +13,7 @@ import stellar.sdk.model.result._
 @Singleton
 class PaymentsController @Inject()(cc: MessagesControllerComponents,
                                    authenticatedUserAction: AuthenticatedUserAction,
-                                   paymentRepo: PaymentRepo,
-                                   processor: PaymentProcessor,
-                                   config: Configuration,
-                                   system: ActorSystem
-                                  ) extends MessagesAbstractController(cc) {
+                                   paymentRepo: PaymentRepo) extends MessagesAbstractController(cc) {
 
   private val stroopsInLumen = 10000000.0
 
@@ -29,8 +22,11 @@ class PaymentsController @Inject()(cc: MessagesControllerComponents,
     PaymentNoDestination, PaymentDestinationNoTrust, PaymentDestinationNotAuthorised, PaymentDestinationLineFull, PaymentNoIssuer
   ).map(r => r.opResultCode -> r).toMap
 
+  private val UTC: ZoneId = ZoneId.of("UTC")
+
   private val paymentFields = (p: Payment) =>
     Some((
+      p.id,
       p.scheduled.toInstant.toEpochMilli,
       p.submitted.map(_.toInstant.toEpochMilli),
       p.source.accountId,
@@ -42,6 +38,7 @@ class PaymentsController @Inject()(cc: MessagesControllerComponents,
     ))
 
   implicit val paymentWrites: Writes[Payment] = (
+    (JsPath \ "id").write[Option[Long]] and
     (JsPath \ "scheduled").write[Long] and
     (JsPath \ "submitted").writeNullable[Long] and
     (JsPath \ "from").write[String] and
@@ -52,11 +49,45 @@ class PaymentsController @Inject()(cc: MessagesControllerComponents,
     (JsPath \ "result").writeNullable[String]
     )(unlift(paymentFields))
 
-  def listHistory: Action[AnyContent] = authenticatedUserAction { implicit req =>
-    Ok(Json.toJson(paymentRepo.listHistoric))
+  implicit val paymentsWrites: Writes[PaymentSubList] = (
+    (JsPath \ "payments").write[Seq[Payment]] and
+    (JsPath \ "total").write[Option[Int]]
+  )(unlift(PaymentSubList.unapply))
+
+  def listHistory(): Action[AnyContent] = authenticatedUserAction { implicit req =>
+    val payments = paymentRepo.history()
+    val count = paymentRepo.countHistoric
+    Ok(Json.toJson(PaymentSubList(payments, Some(count))))
   }
 
-  def listScheduled: Action[AnyContent] = authenticatedUserAction { implicit req =>
-    Ok(Json.toJson(paymentRepo.listScheduled))
+  def listHistoryBefore(id: Long): Action[AnyContent] = authenticatedUserAction { implicit req =>
+    val payments = paymentRepo.historyBefore(id)
+    Ok(Json.toJson(PaymentSubList(payments)))
+  }
+
+  def listHistoryAfter(id: Long): Action[AnyContent] = authenticatedUserAction { implicit req =>
+    val payments = paymentRepo.historyAfter(id)
+    Ok(Json.toJson(PaymentSubList(payments.reverse)))
+  }
+
+  def listScheduled(): Action[AnyContent] = authenticatedUserAction { implicit req =>
+    val payments = paymentRepo.scheduled()
+    val count = paymentRepo.countScheduled
+    Ok(Json.toJson(PaymentSubList(payments, Some(count))))
+  }
+
+  // todo - test
+  def listScheduledBefore(id: Long): Action[AnyContent] = authenticatedUserAction { implicit req =>
+    val payments = paymentRepo.scheduledBefore(id)
+    Ok(Json.toJson(PaymentSubList(payments.reverse)))
+  }
+
+  // todo - test
+  def listScheduledAfter(id: Long): Action[AnyContent] = authenticatedUserAction { implicit req =>
+    val payments = paymentRepo.scheduledAfter(id)
+    Ok(Json.toJson(PaymentSubList(payments)))
   }
 }
+
+case class PaymentSubList(payments: Seq[Payment], total: Option[Int] = None)
+

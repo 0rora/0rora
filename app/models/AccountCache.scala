@@ -7,10 +7,11 @@ class AccountCache() {
 
   private var available: Map[String, Account] = Map.empty[String, Account]
   private var busy: Map[String, Account] = Map.empty[String, Account]
+  private val logger = Logger("account-cache")
 
   def returnAccount(a: Account): Unit = {
     val key = a.publicKey.accountId
-    Logger.debug(s"[$key] is now available.")
+    logger.debug(s"[$key] is now available.")
     available = available.updated(key, a)
     busy = busy.filterKeys(_ != key)
   }
@@ -19,18 +20,18 @@ class AccountCache() {
     case (key, accn) +: tail =>
       available = tail.toMap
       busy = busy.updated(key, accn)
-      Logger.debug(s"[$key] is now busy.")
+      logger.debug(s"[$key] is now busy.")
       Some(accn)
     case _ => None
   }
 
   def retire(a: Account): Unit = {
     val key = a.publicKey.accountId
-    Logger.debug(s"[$key] is retired.")
+    logger.debug(s"[$key] is retired.")
     available = available.filterKeys(_ != key)
     busy = busy.filterKeys(_ != key)
     if (available.isEmpty && busy.isEmpty) {
-      Logger.warn(s"There are no accounts left in the cache. All have been retired.")
+      logger.warn(s"There are no accounts left in the cache. All have been retired.")
     }
   }
 

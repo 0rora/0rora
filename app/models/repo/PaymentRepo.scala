@@ -19,6 +19,8 @@ class PaymentRepo @Inject()() {
   implicit private val session: AutoSession = AutoSession
   private val UTC = ZoneId.of("UTC")
 
+  private val selectPayment = sqls"select id, source, destination, code, issuer, units, received, scheduled, submitted, status, op_result"
+
   val writer: Sink[Payment, NotUsed] = Flow[Payment]
     .groupedWithin(100, 1.second)
     .map {
@@ -33,27 +35,48 @@ class PaymentRepo @Inject()() {
     """.batch(params: _*).apply()
   })
 
-  def listScheduled: Seq[Payment] = {
+  def listScheduled(descending: Boolean = true, fromClause: Option[(ZonedDateTime, Long)] = None, maxRecords: Int = 100): Seq[Payment] = {
+    val startAtClause = fromClause match {
+      case Some((scheduled, id)) =>
+        if (descending) sqls"and scheduled <= $scheduled and id <= $id"
+        else sqls"and scheduled >= $scheduled and id >= $id"
+      case _ => sqls""
+    }
+    val order = if (descending) sqls"desc" else sqls"asc"
     sql"""
-       select id, source, destination, code, issuer, units, received, scheduled, submitted, status, op_result
+       $selectPayment
        from payments
        where status=${Pending.name}
-       order by scheduled
+       $startAtClause
+       order by scheduled $order, id $order
+       limit $maxRecords
+     """.map(from).list().apply()
+  }
+
+  def listHistoric(descending: Boolean = true, fromId: Option[Long] = None, maxRecords: Int = 100): Seq[Payment] = {
+    val startAtClause = if (descending) sqls"id <= ${fromId.getOrElse(Long.MaxValue)}" else sqls"id >= ${fromId.getOrElse(0)}"
+    val order = if (descending) sqls"desc" else sqls"asc"
+    sql"""
+       $selectPayment
+       from payments
+       where status in ('failed', 'succeeded')
+       and $startAtClause
+       order by id $order
+       limit $maxRecords
     """.map(from).list().apply()
   }
 
-  def listHistoric: Seq[Payment] = {
-    sql"""
-       select id, source, destination, code, issuer, units, received, scheduled, submitted, status, op_result
-       from payments
-       where status in ('failed', 'succeeded')
-       order by id desc
-    """.map(from).list().apply()
+  def countHistoric: Int = {
+    sql"""select count(1) from payments where status in ('failed', 'succeeded')""".map(_.int(1)).single().apply().get
+  }
+
+  def countScheduled: Int = {
+    sql"""select count(1) from payments where status=${Pending.name}""".map(_.int(1)).single().apply().get
   }
 
   def due(maxRecords: Int): Seq[Payment] = {
     sql"""
-       select id, source, destination, code, issuer, units, received, scheduled, submitted, status, op_result
+       $selectPayment
        from payments
        where status='pending'
        and scheduled <= ${ZonedDateTime.now.toInstant}
@@ -100,15 +123,78 @@ class PaymentRepo @Inject()() {
     }.single().apply().flatten
   }
 
-  // todo - remove me
-  def durationUntilNextDue: Option[FiniteDuration] = {
-    sql"""select min(scheduled) as next from payments where status='pending'""".map {rs =>
-      Option(rs.timestamp("next")).map { next =>
-        val when = ZonedDateTime.ofInstant(next.toInstant, UTC)
-        val now = ZonedDateTime.now
-        Duration.fromNanos(math.max(0L, java.time.Duration.between(now.toInstant, when.toInstant).toNanos))
-      }
-    }.single().apply().flatten
+  // todo - test
+  def history(limit: Int = 100): Seq[Payment] = {
+    sql"""
+      $selectPayment
+      FROM payments
+      WHERE status IN ('succeeded','failed')
+      ORDER BY submitted DESC, id DESC
+      LIMIT $limit;
+    """.map(from).list().apply()
+  }
+
+  // todo - test
+  def historyBefore(id: Long, limit: Int = 100): Seq[Payment] = {
+    sql"""
+      $selectPayment
+      FROM payments
+      WHERE status IN ('succeeded','failed')
+      AND id < $id
+      AND submitted <= (SELECT submitted FROM payments WHERE id=$id)
+      ORDER BY submitted DESC, id DESC
+      LIMIT $limit;
+    """.map(from).list().apply()
+  }
+
+  // todo - test
+  def historyAfter(id: Long, limit: Int = 100): Seq[Payment] = {
+    sql"""
+      $selectPayment
+      FROM payments
+      WHERE status IN ('succeeded','failed')
+      AND id > $id
+      AND submitted >= (SELECT submitted FROM payments WHERE id=$id)
+      ORDER BY submitted ASC, id ASC
+      LIMIT $limit;
+    """.map(from).list().apply()
+  }
+
+  // todo - test
+  def scheduled(limit: Int = 100): Seq[Payment] = {
+    sql"""
+      $selectPayment
+      FROM payments
+      WHERE status='pending'
+      ORDER BY scheduled ASC, id ASC
+      LIMIT $limit;
+    """.map(from).list().apply()
+  }
+
+  // todo -test
+  def scheduledBefore(id: Long, limit: Int = 100): Seq[Payment] = {
+    sql"""
+       $selectPayment
+       FROM payments
+       WHERE status='pending'
+       AND id < $id
+       AND scheduled <= (select scheduled from payments where id=$id)
+       ORDER BY scheduled DESC, id DESC
+       LIMIT $limit;
+    """.map(from).list().apply()
+  }
+
+  // todo -test
+  def scheduledAfter(id: Long, limit: Int = 100): Seq[Payment] = {
+    sql"""
+       $selectPayment
+       FROM payments
+       WHERE status='pending'
+       AND id > $id
+       AND scheduled >= (select scheduled from payments where id=$id)
+       ORDER BY scheduled ASC, id ASC
+       LIMIT $limit;
+    """.map(from).list().apply()
   }
 
   private def from(rs: WrappedResultSet): Payment =
