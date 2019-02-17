@@ -17,19 +17,20 @@ object Generators {
     Seq(received, scheduled) = Seq(date01, date02).sortBy(_.toInstant.toEpochMilli)
   } yield Payment(Some(id), source, dest, "XLM", None, units, received, scheduled, None, Payment.Pending, None)
 
-  def genSuccessfulPayment: Gen[Payment] = for {
+  def genSubmittedPayment: Gen[Payment] = for {
     payment <- genScheduledPayment
     submitDate <- genDate
-  } yield payment.copy(submitted = Some(submitDate), status = Payment.Succeeded)
+  } yield payment.copy(submitted = Some(submitDate), status = Payment.Submitted)
 
-  def genFailedPayment: Gen[Payment] = for {
-    successful <- genSuccessfulPayment
-    submitDate <- genDate
-  } yield successful.copy(submitted = Some(submitDate), status = Payment.Failed, opResult = Some("failure message"))
+  def genSuccessfulPayment: Gen[Payment] =
+    genSubmittedPayment.map(_.copy(status = Payment.Succeeded, opResult = Some("OK")))
+
+  def genFailedPayment: Gen[Payment] =
+    genSubmittedPayment.map(_.copy(status = Payment.Failed, opResult = Some("failure message")))
 
   def genHistoricPayment: Gen[Payment] = Gen.oneOf(genSuccessfulPayment, genFailedPayment)
 
-  def genPayment: Gen[Payment] = Gen.oneOf(genHistoricPayment, genScheduledPayment)
+  def genPayment: Gen[Payment] = Gen.oneOf(genHistoricPayment, genScheduledPayment, genSubmittedPayment)
 
   def genDate: Gen[ZonedDateTime] =
     Gen.chooseNum(Long.MinValue, Long.MaxValue)

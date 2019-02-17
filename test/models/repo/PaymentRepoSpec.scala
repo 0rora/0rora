@@ -111,5 +111,37 @@ class PaymentRepoSpec extends Specification with BeforeAfterAll {
     }
   }
 
+  "confirming payments" should {
+    val ps = sample(100, genSubmittedPayment)
+    "move the status to 'successful' and set the op_result to 'OK'" in new PaymentsState(ps) {
+      val ids = sql"""select id from payments""".map(_.long(1)).list().apply()
+      repo.confirm(ids.take(50))
+      val expected = ps.take(50).map(_.copy(id = None, opResult = Some("OK"), status = Payment.Succeeded))
+      repo.history().map(_.copy(id = None)) must containTheSameElementsAs(expected)
+    }
+  }
+
+  "rejecting payments" should {
+    val ps = sample(100, genSubmittedPayment)
+    "move the status to 'failed'" in new PaymentsState(ps) {
+      val ids = sql"""select id from payments""".map(_.long(1)).list().apply()
+      repo.reject(ids.take(50))
+      val expected = ps.take(50).map(_.copy(id = None, status = Payment.Failed))
+      repo.history().map(_.copy(id = None)) must containTheSameElementsAs(expected)
+    }
+  }
+
+  "rejecting payments with an op result" should {
+    val ps = sample(100, genSubmittedPayment)
+    "move the status to 'failed' and update the op_result" in new PaymentsState(ps) {
+      val ids = sql"""select id from payments""".map(_.long(1)).list().apply()
+      repo.rejectWithOpResult(ids.take(50).zipWithIndex.map { case (l, r) => l -> r.toString })
+      val expected = ps.take(50).zipWithIndex.map { case (p, id) =>
+        p.copy(id = None, status = Payment.Failed, opResult = Some(id.toString))
+      }
+      repo.history().map(_.copy(id = None)) must containTheSameElementsAs(expected)
+    }
+  }
+
   private def sample(qty: Int, gen: Gen[Payment]): Seq[Payment] = Array.fill(qty)(gen.sample).toSeq.flatten
 }
