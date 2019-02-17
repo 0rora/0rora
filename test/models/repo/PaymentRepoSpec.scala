@@ -85,8 +85,10 @@ class PaymentRepoSpec extends Specification with BeforeAfterAll {
 
     val psScheduled = sample(80, genScheduledPayment)
     "return only those payments which are pending" in new PaymentsState(psHistoric ++ psScheduled) {
-      repo.due(100) must containTheSameElementsAs(psScheduled.filter(_.scheduled.isBefore(ZonedDateTime.now())))
-    }.pendingUntilFixed("Disregard the ids")
+      repo.due(100).map(_.copy(id = None)) must containTheSameElementsAs(
+        psScheduled.filter(_.scheduled.isBefore(ZonedDateTime.now())).map(_.copy(id = None))
+      )
+    }
   }
 
   private def sample(qty: Int, gen: Gen[Payment]): Seq[Payment] = Array.fill(qty)(gen.sample).toSeq.flatten
