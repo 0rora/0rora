@@ -7,9 +7,8 @@ import akka.stream.scaladsl.{Flow, Sink}
 import javax.inject.Inject
 import models.repo.Payment.{Failed, Pending, Submitted, Succeeded}
 import scalikejdbc.{AutoSession, _}
-import stellar.sdk.model.{Asset, IssuedAmount, NativeAmount}
 import stellar.sdk.model.op.PaymentOperation
-import stellar.sdk.model.result.{OperationResult, PaymentResult, PaymentSuccess}
+import stellar.sdk.model.{Asset, IssuedAmount, NativeAmount}
 import stellar.sdk.{KeyPair, PublicKeyOps}
 
 import scala.concurrent.duration._
@@ -34,37 +33,6 @@ class PaymentRepo @Inject()() {
       values (?, ?, ?, ?, ?, ?, ?, ?)
     """.batch(params: _*).apply()
   })
-
-  def listScheduled(descending: Boolean = true, fromClause: Option[(ZonedDateTime, Long)] = None, maxRecords: Int = 100): Seq[Payment] = {
-    val startAtClause = fromClause match {
-      case Some((scheduled, id)) =>
-        if (descending) sqls"and scheduled <= $scheduled and id <= $id"
-        else sqls"and scheduled >= $scheduled and id >= $id"
-      case _ => sqls""
-    }
-    val order = if (descending) sqls"desc" else sqls"asc"
-    sql"""
-       $selectPayment
-       from payments
-       where status=${Pending.name}
-       $startAtClause
-       order by scheduled $order, id $order
-       limit $maxRecords
-     """.map(from).list().apply()
-  }
-
-  def listHistoric(descending: Boolean = true, fromId: Option[Long] = None, maxRecords: Int = 100): Seq[Payment] = {
-    val startAtClause = if (descending) sqls"id <= ${fromId.getOrElse(Long.MaxValue)}" else sqls"id >= ${fromId.getOrElse(0)}"
-    val order = if (descending) sqls"desc" else sqls"asc"
-    sql"""
-       $selectPayment
-       from payments
-       where status in ('failed', 'succeeded')
-       and $startAtClause
-       order by id $order
-       limit $maxRecords
-    """.map(from).list().apply()
-  }
 
   def countHistoric: Int = {
     sql"""select count(1) from payments where status in ('failed', 'succeeded')""".map(_.int(1)).single().apply().get
