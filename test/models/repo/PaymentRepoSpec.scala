@@ -2,8 +2,8 @@ package models.repo
 
 import java.time.ZonedDateTime
 
-import models.Generators
-import models.Generators.genPayment
+import models.Generators._
+import models.Payment
 import org.scalacheck.Gen
 import org.specs2.mutable.Specification
 import org.specs2.specification.BeforeAfterAll
@@ -44,44 +44,50 @@ class PaymentRepoSpec extends Specification with BeforeAfterAll {
     database.foreach(_.shutdown())
   }
 
-  private val repo = new PaymentRepo
+  private def repo()(implicit session: DBSession) = new PaymentRepo()
+
+  class PaymentsState(ps: Seq[Payment]) extends AutoRollback {
+    override def fixture(implicit session: DBSession): Unit = {
+      val params = ps.map { p =>
+        Seq(p.source.accountId, p.destination.accountId, p.code, p.issuer.map(_.accountId).orNull, p.units,
+          p.received, p.scheduled, p.submitted.orNull, p.status.name, p.opResult.orNull)
+      }
+      sql"""
+          insert into payments (source, destination, code, issuer, units, received, scheduled, submitted, status, op_result)
+          values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """.batch(params: _*).apply()
+    }
+  }
 
   "count of history payments" should {
-    "equal the qty of payments with status succeeded or failed" in new AutoRollback {
-      var historicCount: Int = 0
-
-      override def fixture(implicit session: DBSession): Unit = {
-        val payments = insert(1000, genPayment)
-        historicCount = payments.count(p => Set[Payment.Status](Payment.Succeeded, Payment.Failed).contains(p.status))
-      }
-
-      repo.countHistoric mustEqual historicCount
+    val ps = sample(1000, genPayment)
+    "equal the qty of payments with status succeeded or failed" in new PaymentsState(ps) {
+      repo.countHistoric mustEqual ps.count(_.status == Payment.Succeeded) + ps.count(_.status == Payment.Failed)
     }
   }
 
   "count of scheduled payments" should {
-    "equal the qty of payments with status of pending" in new AutoRollback {
-      var scheduledCount: Int = 0
-
-      override def fixture(implicit session: DBSession): Unit = {
-        val payments = insert(1000, genPayment)
-        scheduledCount = payments.count(_.status == Payment.Pending)
-      }
-
-      repo.countScheduled mustEqual scheduledCount
+    val ps = sample(1000, genPayment)
+    "equal the qty of payments with status of pending" in new PaymentsState(ps) {
+      repo.countScheduled mustEqual ps.count(_.status == Payment.Pending)
     }
   }
 
-  private def insert(qty: Int, gen: Gen[Payment])(implicit s: DBSession): Seq[Payment] = {
-    val payments = Array.fill(1000)(genPayment.sample).flatten
-    val params = payments.map { p =>
-      Seq(p.source.accountId, p.destination.accountId, p.code, p.issuer.map(_.accountId).orNull, p.units,
-        p.received, p.scheduled, p.submitted.orNull, p.status.name, p.opResult.orNull)
+  "list of due payments" should {
+    "return nothing if there is nothing" in new PaymentsState(Nil)  {
+      repo.due(100) must beEmpty
     }
-    sql"""
-          insert into payments (source, destination, code, issuer, units, received, scheduled, submitted, status, op_result)
-          values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """.batch(params: _*).apply()
-    payments
+
+    val psHistoric = sample(100, genHistoricPayment)
+    "return nothing if there is nothing due" in new PaymentsState(psHistoric) {
+      repo.due(150) must beEmpty
+    }
+
+    val psScheduled = sample(80, genScheduledPayment)
+    "return only those payments which are pending" in new PaymentsState(psHistoric ++ psScheduled) {
+      repo.due(100) must containTheSameElementsAs(psScheduled.filter(_.scheduled.isBefore(ZonedDateTime.now())))
+    }.pendingUntilFixed("Disregard the ids")
   }
+
+  private def sample(qty: Int, gen: Gen[Payment]): Seq[Payment] = Array.fill(qty)(gen.sample).toSeq.flatten
 }

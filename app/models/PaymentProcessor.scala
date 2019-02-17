@@ -7,9 +7,10 @@ import akka.actor.{Actor, ActorSystem, Props}
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.{Flow, Sink, Source}
 import javax.inject.{Inject, Singleton}
-import models.repo.{Payment, PaymentRepo}
-import play.api.inject.{Binding, Module}
+import models.repo.PaymentRepo
+import play.api.inject.{Binding, Module, bind}
 import play.api.{Configuration, Environment, Logger}
+import scalikejdbc.{AutoSession, DBSession}
 import stellar.sdk.model.response.{TransactionApproved, TransactionRejected}
 import stellar.sdk.model.result.TransactionResult.{BadSequenceNumber, InsufficientBalance}
 import stellar.sdk.model.result._
@@ -161,6 +162,9 @@ class PaymentProcessor @Inject()(repo: PaymentRepo,
 
 class PaymentProcessorModule extends Module {
   def bindings(env: Environment, config: Configuration): Seq[Binding[_]] =
-    Seq(play.api.inject.bind[PaymentProcessor].toSelf.eagerly())
+    Seq(
+      bind[PaymentProcessor].toSelf.eagerly(),
+      bind[DBSession].to(AutoSession)
+    )
 }
 

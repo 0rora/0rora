@@ -4,18 +4,18 @@ import java.time.{ZoneId, ZonedDateTime}
 
 import akka.NotUsed
 import akka.stream.scaladsl.{Flow, Sink}
+import javax.inject
 import javax.inject.Inject
-import models.repo.Payment.{Failed, Pending, Submitted, Succeeded}
+import models.Payment
+import models.Payment.{Failed, Pending, Submitted, Succeeded}
 import scalikejdbc.{AutoSession, _}
-import stellar.sdk.model.op.PaymentOperation
-import stellar.sdk.model.{Asset, IssuedAmount, NativeAmount}
-import stellar.sdk.{KeyPair, PublicKeyOps}
+import stellar.sdk.KeyPair
 
 import scala.concurrent.duration._
 
 @javax.inject.Singleton
-class PaymentRepo @Inject()() {
-  implicit private val session: AutoSession = AutoSession
+class PaymentRepo @Inject()()(implicit val session: DBSession) {
+
   private val UTC = ZoneId.of("UTC")
 
   private val selectPayment = sqls"select id, source, destination, code, issuer, units, received, scheduled, submitted, status, op_result"
@@ -181,43 +181,9 @@ class PaymentRepo @Inject()() {
     )
 }
 
-case class Payment(id: Option[Long],
-                   source: PublicKeyOps,
-                   destination: PublicKeyOps,
-                   code: String,
-                   issuer: Option[PublicKeyOps],
-                   units: Long,
-                   received: ZonedDateTime,
-                   scheduled: ZonedDateTime,
-                   submitted: Option[ZonedDateTime],
-                   status: Payment.Status,
-                   opResult: Option[String] = None) {
+object PaymentRepo {
 
-  def asOperation = PaymentOperation(
-    destination, issuer.map(i => IssuedAmount(units, Asset(code, i))).getOrElse(NativeAmount(units)), Some(source)
-  )
-}
-
-object Payment {
-
-  def status(s: String): Status = s match {
-    case "pending" => Pending
-    case "submitted" => Submitted
-    case "failed" => Failed
-    case "succeeded" => Succeeded
-    case _ => throw new Exception(s"Payment status unrecognised: $s")
-  }
-
-  sealed trait Status {
-    val name: String = getClass.getSimpleName.toLowerCase().replace("$", "")
-  }
-
-  case object Pending extends Status
-
-  case object Submitted extends Status
-
-  case object Failed extends Status
-
-  case object Succeeded extends Status
+  @inject.Singleton
+  implicit val session: DBSession = AutoSession
 
 }

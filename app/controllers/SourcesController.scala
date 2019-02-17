@@ -9,8 +9,8 @@ import akka.stream.scaladsl.{Keep, Sink, Source}
 import javax.inject.Inject
 import kantan.csv.ops._
 import kantan.csv.{rfc, _}
-import models.PaymentProcessor
-import models.repo.{Payment, PaymentRepo}
+import models.{Payment, PaymentProcessor}
+import models.repo.PaymentRepo
 import play.Logger
 import play.api.Configuration
 import play.api.libs.Files

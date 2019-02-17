@@ -1,11 +1,8 @@
 package models
 
-import java.time.{Instant, ZoneId, ZonedDateTime}
+import java.time.{ZoneId, ZonedDateTime}
 
-import models.Generators.genDate
-import models.repo.Payment
 import org.scalacheck.Gen
-import org.specs2.ScalaCheck
 import stellar.sdk.KeyPair
 
 object Generators {

@@ -7,7 +7,8 @@ import akka.stream.ActorMaterializer
 import controllers.actions.AuthenticatedUserAction
 import models.Generators.genSuccessfulPayment
 import models.Global.SessionUsernameKey
-import models.repo.{Payment, PaymentRepo}
+import models.Payment
+import models.repo.PaymentRepo
 import org.scalacheck.{Arbitrary, Gen}
 import org.specs2.ScalaCheck
 import org.specs2.concurrent.ExecutionEnv
