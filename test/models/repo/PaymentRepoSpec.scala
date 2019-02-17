@@ -1,6 +1,6 @@
 package models.repo
 
-import java.time.ZonedDateTime
+import java.time.{ZoneId, ZonedDateTime}
 
 import models.Generators._
 import models.Payment
@@ -18,6 +18,7 @@ class PaymentRepoSpec extends Specification with BeforeAfterAll {
 
   sequential
 
+  private val UTC = ZoneId.of("UTC")
   private var database: Option[Database] = None
   private val (source, dest) = (KeyPair.random, KeyPair.random)
   private val (fiveDaysAgo, now, fiveDaysFromNow) = {
@@ -35,7 +36,6 @@ class PaymentRepoSpec extends Specification with BeforeAfterAll {
     val scripts = evolutions.scripts(ThisClassLoaderEvolutionsReader)
     evolutions.evolve(scripts, autocommit = true)
     ConnectionPool.add(DEFAULT_NAME, new DataSourceConnectionPool(db.dataSource))
-//    addFixtures()
     database = Some(db)
   }
 
@@ -74,7 +74,7 @@ class PaymentRepoSpec extends Specification with BeforeAfterAll {
   }
 
   "list of due payments" should {
-    "return nothing if there is nothing" in new PaymentsState(Nil)  {
+    "return nothing if there is nothing" in new PaymentsState(Nil) {
       repo.due(100) must beEmpty
     }
 
@@ -88,6 +88,26 @@ class PaymentRepoSpec extends Specification with BeforeAfterAll {
       repo.due(100).map(_.copy(id = None)) must containTheSameElementsAs(
         psScheduled.filter(_.scheduled.isBefore(ZonedDateTime.now())).map(_.copy(id = None))
       )
+    }
+  }
+
+  "submitting payments" should {
+    val now = ZonedDateTime.now(UTC)
+    val ps = sample(100, genScheduledPayment)
+
+    "move the status to 'submitted' and update the submitted date" in new PaymentsState(ps) {
+      val ids = sql"""select id from payments where status='pending'""".map(_.long(1)).list().apply()
+      repo.submit(ids.take(50), now)
+
+      repo.countScheduled mustEqual 50
+      repo.countHistoric mustEqual 0
+
+      val idsAndDates = sql"select id, submitted from payments where status='submitted'".map { rs =>
+        rs.long("id") -> rs.timestampOpt("submitted").map(_.toInstant).map(ZonedDateTime.ofInstant(_, UTC))
+      }.list().apply()
+
+      idsAndDates.map(_._1) mustEqual ids.take(50)
+      idsAndDates.map(_._2).distinct mustEqual Seq(Some(now))
     }
   }
 
