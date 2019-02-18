@@ -143,5 +143,18 @@ class PaymentRepoSpec extends Specification with BeforeAfterAll {
     }
   }
 
+  "the earliest time due" should {
+    val notDue = sample(100, genHistoricPayment)
+    "return nothing if nothing is due" in new PaymentsState(notDue) {
+      repo.earliestTimeDue must beNone
+    }
+
+    val scheduled = sample(100, genScheduledPayment)
+    "return the earliest date due" in new PaymentsState(notDue ++ scheduled){
+      val expectedDate = scheduled.map(_.scheduled).minBy(_.toInstant.toEpochMilli)
+      repo.earliestTimeDue must beSome(expectedDate)
+    }
+  }
+
   private def sample(qty: Int, gen: Gen[Payment]): Seq[Payment] = Array.fill(qty)(gen.sample).toSeq.flatten
 }
