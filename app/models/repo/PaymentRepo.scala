@@ -91,7 +91,11 @@ class PaymentRepo @Inject()()(implicit val session: DBSession) {
     }.single().apply().flatten
   }
 
-  // todo - test
+  /**
+    * The payments that have previously been submitted to the network, ordered from most recent to earlier.
+    * @param limit limit of the results
+    * @return list of 0 to $limit payments
+    */
   def history(limit: Int = 100): Seq[Payment] = {
     sql"""
       $selectPayment

@@ -156,5 +156,29 @@ class PaymentRepoSpec extends Specification with BeforeAfterAll {
     }
   }
 
+  "payment history" should {
+
+    "return nothing if there is nothing" in new PaymentsState(Nil) {
+      repo.history() must beEmpty
+    }
+
+    val scheduled = sample(100, genScheduledPayment)
+    val submitted = sample(5, genSubmittedPayment)
+    "return nothing if nothing has been submitted" in new PaymentsState(scheduled ++ submitted) {
+      repo.history() must beEmpty
+    }
+
+    val historic = sample(75, genHistoricPayment)
+    "return all historic payments in reverse order" in new PaymentsState(scheduled ++ submitted ++ historic) {
+      val expected = historic.sortBy(_.submitted.get.toInstant.toEpochMilli).reverse.map(_.copy(id = None))
+      repo.history().map(_.copy(id = None)) mustEqual expected
+    }
+
+    "limit the payments returned" in new PaymentsState(scheduled ++ submitted ++ historic) {
+      val expected = historic.sortBy(_.submitted.get.toInstant.toEpochMilli).reverse.take(33).map(_.copy(id = None))
+      repo.history(33).map(_.copy(id = None)) mustEqual expected
+    }
+  }
+
   private def sample(qty: Int, gen: Gen[Payment]): Seq[Payment] = Array.fill(qty)(gen.sample).toSeq.flatten
 }
