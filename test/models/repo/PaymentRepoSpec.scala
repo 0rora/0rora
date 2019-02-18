@@ -195,7 +195,15 @@ class PaymentRepoSpec extends Specification with BeforeAfterAll {
       val expected = historicWithRealIds.slice(31, 48)
       repo.historyBefore(targetId, 17) must containTheSameElementsAs(expected)
     }
+  }
 
+  "payment history after a given id" should {
+
+    "return nothing if there is nothing" in new PaymentsState(Nil) {
+      repo.historyAfter(100) must beEmpty
+    }
+
+    val historic = sample(75, genHistoricPayment)
     "return all historic payments in ascending order after the given id" in new PaymentsState(historic) {
       val historicWithRealIds = repo.history()
       val targetId = historicWithRealIds.drop(30).head.id.get
