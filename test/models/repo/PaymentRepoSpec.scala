@@ -57,6 +57,8 @@ class PaymentRepoSpec extends Specification with BeforeAfterAll {
           values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """.batch(params: _*).apply()
     }
+
+    def fetchIds: Seq[Long] = sql"select id from payments".map(_.long(1)).list().apply
   }
 
   "count of history payments" should {
@@ -114,7 +116,7 @@ class PaymentRepoSpec extends Specification with BeforeAfterAll {
   "confirming payments" should {
     val ps = sample(100, genSubmittedPayment)
     "move the status to 'successful' and set the op_result to 'OK'" in new PaymentsState(ps) {
-      val ids = sql"""select id from payments""".map(_.long(1)).list().apply()
+      val ids = fetchIds
       repo.confirm(ids.take(50))
       val expected = ps.take(50).map(_.copy(id = None, opResult = Some("OK"), status = Payment.Succeeded))
       repo.history().map(_.copy(id = None)) must containTheSameElementsAs(expected)
@@ -124,7 +126,7 @@ class PaymentRepoSpec extends Specification with BeforeAfterAll {
   "rejecting payments" should {
     val ps = sample(100, genSubmittedPayment)
     "move the status to 'failed'" in new PaymentsState(ps) {
-      val ids = sql"""select id from payments""".map(_.long(1)).list().apply()
+      val ids = fetchIds
       repo.reject(ids.take(50))
       val expected = ps.take(50).map(_.copy(id = None, status = Payment.Failed))
       repo.history().map(_.copy(id = None)) must containTheSameElementsAs(expected)
@@ -177,6 +179,28 @@ class PaymentRepoSpec extends Specification with BeforeAfterAll {
     "limit the payments returned" in new PaymentsState(scheduled ++ submitted ++ historic) {
       val expected = historic.sortBy(_.submitted.get.toInstant.toEpochMilli).reverse.take(33).map(_.copy(id = None))
       repo.history(33).map(_.copy(id = None)) mustEqual expected
+    }
+  }
+
+  "payment history before a given id" should {
+
+    "return nothing if there is nothing" in new PaymentsState(Nil) {
+      repo.historyBefore(100) must beEmpty
+    }
+
+    val historic = sample(75, genHistoricPayment)
+    "return all historic payments in reverse order before the given id" in new PaymentsState(historic) {
+      val historicWithRealIds = repo.history()
+      val targetId = historicWithRealIds.drop(30).head.id.get
+      val expected = historicWithRealIds.slice(31, 48)
+      repo.historyBefore(targetId, 17) must containTheSameElementsAs(expected)
+    }
+
+    "return all historic payments in ascending order after the given id" in new PaymentsState(historic) {
+      val historicWithRealIds = repo.history()
+      val targetId = historicWithRealIds.drop(30).head.id.get
+      val expected = historicWithRealIds.slice(13, 30).reverse
+      repo.historyAfter(targetId, 17) must containTheSameElementsAs(expected)
     }
   }
 

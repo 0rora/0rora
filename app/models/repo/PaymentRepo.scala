@@ -92,8 +92,8 @@ class PaymentRepo @Inject()()(implicit val session: DBSession) {
   }
 
   /**
-    * The payments that have previously been submitted to the network, ordered from most recent to earlier.
-    * @param limit limit of the results
+    * The payments that have previously been processed by the network, ordered from most recent to earlier.
+    * @param limit limit the quantity of results
     * @return list of 0 to $limit payments
     */
   def history(limit: Int = 100): Seq[Payment] = {
@@ -106,27 +106,44 @@ class PaymentRepo @Inject()()(implicit val session: DBSession) {
     """.map(from).list().apply()
   }
 
-  // todo - test
+  /**
+    * The payments that have previously been processed by the network, prior to the given id,
+    * ordered from most recent to earlier.
+    * @param id only show the payments preceding this id.
+    * @param limit limit the quantity of results
+    * @return list of 0 to $limit payments
+    */
   def historyBefore(id: Long, limit: Int = 100): Seq[Payment] = {
     sql"""
       $selectPayment
       FROM payments
       WHERE status IN ('succeeded','failed')
-      AND id < $id
-      AND submitted <= (SELECT submitted FROM payments WHERE id=$id)
+      AND (
+        submitted < (SELECT submitted FROM payments WHERE id=$id)
+        OR
+        (submitted = (SELECT submitted FROM payments WHERE id=$id) AND id < $id)
+      )
       ORDER BY submitted DESC, id DESC
       LIMIT $limit;
     """.map(from).list().apply()
   }
 
-  // todo - test
+  /**
+    * The payments that have previously been processed by the network, after the given id,
+    * ordered from the earliest to most recent.
+    * @param id only show the payments succeeding this id
+    * @param limit limit the quantity of results
+    * @return list of 0 to $limit payments
+    */
   def historyAfter(id: Long, limit: Int = 100): Seq[Payment] = {
     sql"""
       $selectPayment
       FROM payments
       WHERE status IN ('succeeded','failed')
-      AND id > $id
-      AND submitted >= (SELECT submitted FROM payments WHERE id=$id)
+      AND (
+        submitted > (SELECT submitted FROM payments WHERE id=$id)
+        OR (submitted = (SELECT submitted FROM payments WHERE id=$id) AND id > $id)
+      )
       ORDER BY submitted ASC, id ASC
       LIMIT $limit;
     """.map(from).list().apply()
