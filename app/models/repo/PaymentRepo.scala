@@ -164,14 +164,21 @@ class PaymentRepo @Inject()()(implicit val session: DBSession) {
     """.map(from).list().apply()
   }
 
-  // todo -test
+  /**
+    * The payments that yet to be processed by the network, ordered from next due to latest due, prior to the given id.
+    * @param id only return payments prior to the scheduled date of the given id (or the same date, by lower id).
+    * @param limit limit the quantity of results
+    * @return list of 0 to $limit payments
+    */
   def scheduledBefore(id: Long, limit: Int = 100): Seq[Payment] = {
     sql"""
        $selectPayment
        FROM payments
        WHERE status='pending'
-       AND id < $id
-       AND scheduled <= (select scheduled from payments where id=$id)
+       AND (
+         scheduled < (select scheduled from payments where id=$id)
+         OR (scheduled = (select scheduled from payments where id=$id) AND id < $id)
+       )
        ORDER BY scheduled DESC, id DESC
        LIMIT $limit;
     """.map(from).list().apply()

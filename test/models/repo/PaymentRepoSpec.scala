@@ -20,11 +20,6 @@ class PaymentRepoSpec extends Specification with BeforeAfterAll {
 
   private val UTC = ZoneId.of("UTC")
   private var database: Option[Database] = None
-  private val (source, dest) = (KeyPair.random, KeyPair.random)
-  private val (fiveDaysAgo, now, fiveDaysFromNow) = {
-    val now = ZonedDateTime.now()
-    (now.minusDays(5).toInstant, now.toInstant, now.plusDays(5).toInstant)
-  }
 
   def beforeAll(): Unit = {
     val db = Databases.inMemory(
@@ -209,6 +204,45 @@ class PaymentRepoSpec extends Specification with BeforeAfterAll {
       val targetId = historicWithRealIds.drop(30).head.id.get
       val expected = historicWithRealIds.slice(13, 30).reverse
       repo.historyAfter(targetId, 17) must containTheSameElementsAs(expected)
+    }
+  }
+
+  "payment schedule" should {
+
+    "return nothing if there is nothing" in new PaymentsState(Nil) {
+      repo.scheduled() must beEmpty
+    }
+
+    val history = sample(100, genHistoricPayment)
+    val submitted = sample(5, genSubmittedPayment)
+    "return nothing if nothing has been scheduled" in new PaymentsState(history ++ submitted) {
+      repo.scheduled() must beEmpty
+    }
+
+    val scheduled = sample(75, genScheduledPayment)
+    "return all scheduled payments in ascending order" in new PaymentsState(history ++ submitted ++ scheduled) {
+      val expected = scheduled.sortBy(_.scheduled.toInstant.toEpochMilli).map(_.copy(id = None))
+      repo.scheduled().map(_.copy(id = None)) mustEqual expected
+    }
+
+    "limit the payments returned" in new PaymentsState(history ++ submitted ++ scheduled) {
+      val expected = scheduled.sortBy(_.scheduled.toInstant.toEpochMilli).take(33).map(_.copy(id = None))
+      repo.scheduled(33).map(_.copy(id = None)) mustEqual expected
+    }
+  }
+
+  "payment schedule before a given id" should {
+
+    "return nothing if there is nothing" in new PaymentsState(Nil) {
+      repo.scheduledBefore(100) must beEmpty
+    }
+
+    val historic = sample(15, genScheduledPayment)
+    "return all scheduled payments in reverse order before the given id" in new PaymentsState(historic) {
+      val scheduledWithRealId = repo.scheduled()
+      val targetId = scheduledWithRealId.drop(10).head.id.get
+      val expected = scheduledWithRealId.slice(3, 10).reverse
+      repo.scheduledBefore(targetId, 7) must containTheSameElementsAs(expected)
     }
   }
 
