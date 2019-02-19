@@ -12,7 +12,6 @@ import play.api.db.{Database, Databases}
 import scalikejdbc.ConnectionPool.DEFAULT_NAME
 import scalikejdbc._
 import scalikejdbc.specs2.mutable.AutoRollback
-import stellar.sdk.KeyPair
 
 class PaymentRepoSpec extends Specification with BeforeAfterAll {
 
@@ -188,7 +187,7 @@ class PaymentRepoSpec extends Specification with BeforeAfterAll {
       val historicWithRealIds = repo.history()
       val targetId = historicWithRealIds.drop(30).head.id.get
       val expected = historicWithRealIds.slice(31, 48)
-      repo.historyBefore(targetId, 17) must containTheSameElementsAs(expected)
+      repo.historyBefore(targetId, 17) mustEqual expected
     }
   }
 
@@ -203,7 +202,7 @@ class PaymentRepoSpec extends Specification with BeforeAfterAll {
       val historicWithRealIds = repo.history()
       val targetId = historicWithRealIds.drop(30).head.id.get
       val expected = historicWithRealIds.slice(13, 30).reverse
-      repo.historyAfter(targetId, 17) must containTheSameElementsAs(expected)
+      repo.historyAfter(targetId, 17) mustEqual expected
     }
   }
 
@@ -237,12 +236,26 @@ class PaymentRepoSpec extends Specification with BeforeAfterAll {
       repo.scheduledBefore(100) must beEmpty
     }
 
-    val historic = sample(15, genScheduledPayment)
-    "return all scheduled payments in reverse order before the given id" in new PaymentsState(historic) {
+    val scheduled = sample(15, genScheduledPayment)
+    "return all scheduled payments in reverse order before the given id" in new PaymentsState(scheduled) {
       val scheduledWithRealId = repo.scheduled()
       val targetId = scheduledWithRealId.drop(10).head.id.get
       val expected = scheduledWithRealId.slice(3, 10).reverse
-      repo.scheduledBefore(targetId, 7) must containTheSameElementsAs(expected)
+      repo.scheduledBefore(targetId, 7) mustEqual expected
+    }
+  }
+
+  "payment schedule after a given id" should {
+    "return nothing if there is nothing" in new PaymentsState(Nil) {
+      repo.scheduledAfter(100) must beEmpty
+    }
+
+    val scheduled = sample(15, genScheduledPayment)
+    "return all scheduled payments after the given id" in new PaymentsState(scheduled) {
+      val scheduledWithRealId = repo.scheduled()
+      val targetId = scheduledWithRealId.drop(5).head.id.get
+      val expected = scheduledWithRealId.slice(6, 13)
+      repo.scheduledAfter(targetId, 7) mustEqual expected
     }
   }
 
