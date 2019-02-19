@@ -15,3 +15,11 @@ cache:
     - "$HOME/.sbt/boot/"
     - "$HOME/.sbt/launchers/"
     - "$HOME/.coursier"
+
+notifications:
+  webhooks:
+    urls:
+      - secure: "KcmKR8iy4r8kGxhH76pFpkAyAbmeRA/38J+0gPyWPXIsDnTX1Q1javDSO5Gr+5aWdX958xVUdOE6ooNbmIWtWOScdqQcAThdw//dtYnHDHaxyGp+Yv2Ff1srOd1VZCCQsK/xlWcyiN2UQpqLSxyx/eN0GhukSyPvrMAmqNS67btkqbwzBxGaGckjHoMZ5G6iS+u7yaX0zY+cQjveivSfZnghmrvjq0FXymFzckhzj/65y8dV5qv3e3CtW4/BjOEK3WKhlHt6C8FY7x5ed6YbJMzv+hklzahVPfuYw2Q3sNJirAj9kYdB4Q/2EeYwEaJiBjnAqUqmi97FAO5/L/6yUEQnZG5Emu2qpG2Kya80PCDAv0/eqYGbJghHQEggbyjYmWXyQNylFW+UmrlupOeaLC0JJO3llwKIH7dUgYTyBhcBlTjDVNqQ7//rcVYkof6q8mRvZEY2h7ktFgkog4+pyD24RlbBCVlMn7HhHCP3R/SKOJ8NXtUzW0SN2VZ0JRe1RZ7gnkHcrvH5roiOqIct2aOWthqPX8COs5b5118d2rsfbiyzRIxWEkszKn0jdabR7dN+JnV3h87B/oAjxSV8L9Zn62HavaD1Scv5hWsmekznsVgRAwvt51gIgjTAIVt51sTFyjFiRz8tD4R7bq6Wkag2jQo2H7VUiBZIZfqHZig="
+    on_success: change
+    on_failure: always
+    on_start: never
