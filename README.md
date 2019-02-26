@@ -2,7 +2,10 @@
 
 _Stellar Payment Manager_
 
-[![Travis](https://travis-ci.org/0rora/0rora.svg?branch=master)](https://travis-ci.org/0rora/0rora)
+[![Travis](https://img.shields.io/travis/0rora/0rora.svg?style=plastic)](https://travis-ci.org/0rora/0rora)
+
+
+
 [![Join chat at https://gitter.im/0rora/community](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/0rora/community?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
 A self-hosted solution for easily making, scheduling, editing and responding to Stellar payments.

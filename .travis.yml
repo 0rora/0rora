@@ -5,6 +5,9 @@ scala:
 services:
   - docker
 
+script:
+  - sbt coverage test coverageReport
+
 before_cache:
   - find $HOME/.ivy2 -name "ivydata-*.properties" -delete
   - find $HOME/.sbt -name "*.lock" -delete
