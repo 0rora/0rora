@@ -24,3 +24,5 @@ libraryDependencies ++= Seq(
 )
 
 javaOptions in Test += "-Dconfig.file=conf/in-memory-db.conf"
+
+coverageExcludedPackages := "controllers\\.javascript;router;views.html;controllers\\.Reverse.*"
