@@ -13,7 +13,7 @@ import play.api.test.CSRFTokenHelper._
 
 import scala.concurrent.Future
 
-class UserControllerSpec(implicit ec: ExecutionEnv) extends PlaySpecification with Results with Mockito with ScalaCheck {
+class UserControllerSpec(implicit ec: ExecutionEnv) extends PlaySpecification with Results {
 
   implicit val sys: ActorSystem = ActorSystem("UserControllerSpec")
   implicit val mat: ActorMaterializer = ActorMaterializer()

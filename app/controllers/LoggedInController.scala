@@ -13,5 +13,4 @@ class LoggedInController @Inject()(cc: ControllerComponents,
       .flashing("info" -> "You are logged out.")
       .withNewSession
   }
-
 }
