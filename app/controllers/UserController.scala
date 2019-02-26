@@ -10,7 +10,7 @@ import play.api.mvc._
 
 class UserController @Inject()(cc: MessagesControllerComponents, userRepo: UserRepo) extends MessagesAbstractController(cc) {
 
-  def processLoginAttempt = Action { implicit req: MessagesRequest[AnyContent] =>
+  def processLoginAttempt: Action[AnyContent] = Action { implicit req: MessagesRequest[AnyContent] =>
     UserController.form.bindFromRequest.fold(
       hasErrors = { form: Form[User] =>
         BadRequest(views.html.login(form, routes.UserController.processLoginAttempt()))
