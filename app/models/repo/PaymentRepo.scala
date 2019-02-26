@@ -219,10 +219,3 @@ class PaymentRepo @Inject()()(implicit val session: DBSession) {
       opResult = rs.stringOpt("op_result")
     )
 }
-
-object PaymentRepo {
-
-  @inject.Singleton
-  implicit val session: DBSession = AutoSession
-
-}
