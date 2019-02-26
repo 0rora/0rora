@@ -16,6 +16,9 @@ cache:
     - "$HOME/.sbt/launchers/"
     - "$HOME/.coursier"
 
+after_success:
+  - bash <(curl -s https://codecov.io/bash)
+
 notifications:
   webhooks:
     urls:
