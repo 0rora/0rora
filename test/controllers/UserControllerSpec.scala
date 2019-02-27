@@ -3,13 +3,11 @@ package controllers
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
 import models.repo.UserRepo
-import org.specs2.ScalaCheck
 import org.specs2.concurrent.ExecutionEnv
 import org.specs2.execute.Results
-import org.specs2.mock.Mockito
 import play.api.mvc.{Flash, Result}
-import play.api.test.{FakeRequest, PlaySpecification}
 import play.api.test.CSRFTokenHelper._
+import play.api.test.{FakeRequest, PlaySpecification}
 
 import scala.concurrent.Future
 

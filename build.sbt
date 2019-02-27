@@ -10,7 +10,7 @@ scalaVersion := "2.12.8"
 
 libraryDependencies ++= Seq(
   guice, evolutions, jdbc, specs2 % Test,
-  "io.github.synesso" %% "scala-stellar-sdk" % "0.5.1",
+  "io.github.synesso" %% "scala-stellar-sdk" % "0.5.2",
   "com.nrinaudo" %% "kantan.csv-generic" % "0.4.0",
   "com.h2database" % "h2" % "1.4.192",
   "org.postgresql" % "postgresql" % "42.2.5",

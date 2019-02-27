@@ -26,7 +26,7 @@ class PaymentProcessor @Inject()(repo: PaymentRepo,
                                  config: AppConfig,
                                  system: ActorSystem) {
 
-  private val logger = Logger("payment-processor")
+  private val logger = Logger("0rora.payment_processor")
   private val actor = system.actorOf(Props(new ActorDef()))
   private implicit val ec: ExecutionContextExecutor = system.dispatcher
 

@@ -2,8 +2,8 @@ package models.repo
 
 import java.time.{ZoneId, ZonedDateTime}
 
-import akka.NotUsed
-import akka.stream.scaladsl.{Flow, Sink}
+import akka.{Done, NotUsed}
+import akka.stream.scaladsl.{Flow, Keep, Sink}
 import javax.inject
 import javax.inject.Inject
 import models.Payment
@@ -11,6 +11,7 @@ import models.Payment.{Failed, Pending, Submitted, Succeeded}
 import scalikejdbc.{AutoSession, _}
 import stellar.sdk.KeyPair
 
+import scala.concurrent.Future
 import scala.concurrent.duration._
 
 @javax.inject.Singleton
@@ -20,19 +21,19 @@ class PaymentRepo @Inject()()(implicit val session: DBSession) {
 
   private val selectPayment = sqls"select id, source, destination, code, issuer, units, received, scheduled, submitted, status, op_result"
 
-  val writer: Sink[Payment, NotUsed] = Flow[Payment]
+  val writer: Sink[Payment, Future[Done]] = Flow[Payment]
     .groupedWithin(100, 1.second)
     .map {
       _.map(p =>
         Seq(p.source.accountId, p.destination.accountId, p.code, p.issuer.map(_.accountId).orNull, p.units, p.received, p.scheduled,
           p.status.toString.toLowerCase)
       )
-    }.to(Sink.foreach { params =>
+    }.toMat(Sink.foreach { params =>
     sql"""
       insert into payments (source, destination, code, issuer, units, received, scheduled, status)
       values (?, ?, ?, ?, ?, ?, ?, ?)
     """.batch(params: _*).apply()
-  })
+  })(Keep.right)
 
   def countHistoric: Int = {
     sql"""select count(1) from payments where status in ('failed', 'succeeded')""".map(_.int(1)).single().apply().get

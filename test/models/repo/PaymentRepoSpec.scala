@@ -2,6 +2,10 @@ package models.repo
 
 import java.time.{ZoneId, ZonedDateTime}
 
+import akka.Done
+import akka.actor.ActorSystem
+import akka.stream.ActorMaterializer
+import akka.stream.scaladsl.{Keep, Source}
 import models.Generators._
 import models.Payment
 import org.scalacheck.Gen
@@ -13,12 +17,18 @@ import scalikejdbc.ConnectionPool.DEFAULT_NAME
 import scalikejdbc._
 import scalikejdbc.specs2.mutable.AutoRollback
 
+import scala.annotation.tailrec
+import scala.concurrent.{Await, Future}
+import scala.concurrent.duration.Duration
+
 class PaymentRepoSpec extends Specification with BeforeAfterAll {
 
   sequential
 
   private val UTC = ZoneId.of("UTC")
   private var database: Option[Database] = None
+  implicit val sys: ActorSystem = ActorSystem("PaymentRepoSpec")
+  implicit val mat: ActorMaterializer = ActorMaterializer()
 
   def beforeAll(): Unit = {
     val db = Databases.inMemory(
@@ -266,6 +276,15 @@ class PaymentRepoSpec extends Specification with BeforeAfterAll {
       val targetId = scheduledWithRealId.drop(5).head.id.get
       val expected = scheduledWithRealId.slice(6, 13)
       repo.scheduledAfter(targetId, 7) mustEqual expected
+    }
+  }
+
+  "the payment sink" should {
+    val ps = sample(280, genScheduledPayment)
+    "insert all provided payments as new records" >> new PaymentsState(Nil) {
+      val work: Future[Done] = Source.fromIterator(() => ps.iterator).runWith(repo.writer)
+      Await.result(work, Duration.Inf)
+      repo.scheduled(limit = 280).map(_.copy(id = None)) must containTheSameElementsAs(ps.map(_.copy(id = None)))
     }
   }
 

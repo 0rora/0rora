@@ -7,7 +7,7 @@ class AccountCache() {
 
   private var available: Map[String, Account] = Map.empty[String, Account]
   private var busy: Map[String, Account] = Map.empty[String, Account]
-  private val logger = Logger("account-cache")
+  private val logger = Logger("0rora.account_cache")
 
   def returnAccount(a: Account): Unit = {
     val key = a.publicKey.accountId
