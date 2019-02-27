@@ -11,8 +11,7 @@ import kantan.csv.ops._
 import kantan.csv.{rfc, _}
 import models.{Payment, PaymentProcessor}
 import models.repo.PaymentRepo
-import play.Logger
-import play.api.Configuration
+import play.api.{Configuration, Logger}
 import play.api.libs.Files
 import play.api.libs.json.Json
 import play.api.mvc._
@@ -26,6 +25,8 @@ class SourcesController @Inject()(cc: MessagesControllerComponents,
                                   paymentRepo: PaymentRepo,
                                   paymentProcessor: PaymentProcessor,
                                   implicit val system: ActorSystem) extends MessagesAbstractController(cc) {
+
+  private val logger = Logger("0rora.sources")
 
   implicit private val mat: ActorMaterializer = ActorMaterializer()
   implicit private val paymentDecoder: RowDecoder[Option[Payment]] = RowDecoder.ordered {
