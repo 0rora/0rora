@@ -131,7 +131,7 @@ class PaymentProcessor @Inject()(repo: PaymentRepo,
 
       case RetryTransaction(payments, account) =>
         repo.retry(payments.flatMap(_.id))
-        accountCache.retire(account)
+        accountCache.retireAccount(account)
         context.become(state(nextKnownPaymentDate = Some(ZonedDateTime.now())))
         self ! ProcessPayments
 

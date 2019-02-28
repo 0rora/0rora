@@ -25,7 +25,7 @@ class AccountCache() {
     case _ => None
   }
 
-  def retire(a: Account): Unit = {
+  def retireAccount(a: Account): Unit = {
     val key = a.publicKey.accountId
     logger.debug(s"[$key] is retired.")
     available = available.filterKeys(_ != key)

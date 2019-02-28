@@ -4,6 +4,7 @@ import java.time.{ZoneId, ZonedDateTime}
 
 import org.scalacheck.Gen
 import stellar.sdk.KeyPair
+import stellar.sdk.model.Account
 
 object Generators {
 
@@ -35,5 +36,7 @@ object Generators {
   def genDate: Gen[ZonedDateTime] =
     Gen.chooseNum(Long.MinValue, Long.MaxValue)
       .map(delta => ZonedDateTime.now(ZoneId.of("UTC")).plusNanos(delta).withNano(0))
+
+  def genAccount: Gen[Account] = Gen.posNum[Long].map(Account(KeyPair.random, _))
 
 }
