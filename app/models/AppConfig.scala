@@ -16,12 +16,9 @@ class AppConfig @Inject()(val conf: Configuration) {
     case "test" => TestNetwork
     case "public" => PublicNetwork
     case s =>
-      val uri = new URI(s)
-      Try(uri.toURL) match {
-        case Failure(t) => throw InvalidConfig(s"Configured network is unknown: `0rora.horizon = $s`", t)
-        case _ =>
-      }
-      StandaloneNetwork(uri)
+      Try(new URI(s).toURL).map(_.toURI).map(StandaloneNetwork).recover { case t =>
+        throw InvalidConfig(s"Configured network is unknown: `0rora.horizon = $s`", t)
+      }.get
   }
 
   val accounts: Map[String, KeyPair] =

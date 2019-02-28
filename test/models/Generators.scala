@@ -39,4 +39,12 @@ object Generators {
 
   def genAccount: Gen[Account] = Gen.posNum[Long].map(Account(KeyPair.random, _))
 
+  def genURL: Gen[String] = for {
+    schema <- Gen.oneOf("http", "https")
+    host <- Gen.identifier
+    port <- Gen.choose(80, 1024)
+    segmentCount <- Gen.choose(0, 10)
+    segments <- Gen.listOfN(segmentCount, Gen.identifier)
+  } yield s"$schema://$host:$port/${segments.mkString("/")}"
+
 }
