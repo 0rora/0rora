@@ -7,8 +7,9 @@ import akka.actor.{Actor, ActorSystem, Props}
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.{Flow, Sink, Source}
 import javax.inject.{Inject, Singleton}
+import models.PaymentProcessor.{UpdateNextPaymentTime, _}
 import models.repo.PaymentRepo
-import play.api.inject.{Binding, Module, bind}
+import play.api.inject.{Binding, Module}
 import play.api.{Configuration, Environment, Logger}
 import scalikejdbc.{AutoSession, DBSession}
 import stellar.sdk.model.response.{TransactionApproved, TransactionRejected}
@@ -26,8 +27,8 @@ class PaymentProcessor @Inject()(repo: PaymentRepo,
                                  config: AppConfig,
                                  system: ActorSystem) {
 
-  private val logger = Logger("0rora.payment_processor")
   private val actor = system.actorOf(Props(new ActorDef()))
+  private val logger: Logger = Logger("0rora.payment_processor")
   private implicit val ec: ExecutionContextExecutor = system.dispatcher
 
   private val accountCache = new AccountCache()
@@ -67,9 +68,9 @@ class PaymentProcessor @Inject()(repo: PaymentRepo,
               logger.debug(s"[${account.publicKey.accountId}] Not attempted because $reason")
               reason match {
                 case InsufficientBalance =>
-                  self ! RetryTransaction(ps, account)
+                  self ! RetryPayments(ps, account)
                 case BadSequenceNumber =>
-                  self ! RetryTransaction(ps, account)
+                  self ! RetryPayments(ps, account)
                   self ! RegisterAccount(account.publicKey)
                 case _ =>
                   self ! RejectTransaction(ps, account, r.sequenceUpdated)
@@ -81,9 +82,19 @@ class PaymentProcessor @Inject()(repo: PaymentRepo,
 
     override def receive: Receive = state(nextKnownPaymentDate = None)
 
-    private def state(nextKnownPaymentDate: Option[ZonedDateTime]): Receive = {
+    private def state(nextKnownPaymentDate: Option[ZonedDateTime]): Receive = 
+      processPayments(nextKnownPaymentDate) orElse
+        updateNextPaymentTime orElse
+        confirmPayments orElse
+        rejectPayments orElse
+        rejectTransaction orElse
+        retryPayments orElse
+        updateAccount orElse
+        registerAccount
 
-      // If there are payments due, find and pay them
+
+    // If there are payments due, find and pay them
+    def processPayments(nextKnownPaymentDate: Option[ZonedDateTime]): PartialFunction[Any, Unit] = {
       case ProcessPayments if nextKnownPaymentDate.exists(_.isBefore(ZonedDateTime.now())) =>
         val readyAccounts = accountCache.readyCount
         if (readyAccounts > 0) {
@@ -100,17 +111,22 @@ class PaymentProcessor @Inject()(repo: PaymentRepo,
             Source.fromIterator(() => submittingPaymentsWithAccounts.iterator).to(paymentSink).run()
           }
         }
+    }
 
-      // Check the database to find when the next pending payment is due
-      case UpdateNextPaymentTime =>
-        context.become(state(repo.earliestTimeDue))
+    // Check the database to find when the next pending payment is due
+    val updateNextPaymentTime: PartialFunction[Any, Unit] = {
+      case UpdateNextPaymentTime => context.become(state(repo.earliestTimeDue))
+    }
 
-      // Confirm that these payments have been successful and that this account is ready to use
+    // Confirm that these payments have been successful and that this account is ready to use
+    val confirmPayments: PartialFunction[Any, Unit] = {
       case Confirm(payments, account) =>
         repo.confirm(payments.flatMap(_.id))
         accountCache.returnAccount(account.withIncSeq)
+    }
 
-      // Mark these payments as failed and handle account
+    // Mark these payments as failed and handle account
+    val rejectPayments: PartialFunction[Any, Unit] = {
       case RejectPayments(payments, opResults, account, updatedSeqNo) =>
         val operationResults = if (opResults.forall(_ == PaymentSuccess)) opResults.map(_ => "OK") else
           opResults.map {
@@ -121,25 +137,34 @@ class PaymentProcessor @Inject()(repo: PaymentRepo,
         val account_ = if (updatedSeqNo) account.withIncSeq else account
         accountCache.returnAccount(account_)
         self ! ProcessPayments
+    }
 
-      // Mark these payments as failed and handle account
+    // Mark these payments as failed and handle account
+    val rejectTransaction: PartialFunction[Any, Unit] = {
       case RejectTransaction(payments, account, updatedSeqNo) =>
         repo.reject(payments.flatMap(_.id))
         val account_ = if (updatedSeqNo) account.withIncSeq else account
         accountCache.returnAccount(account_)
         self ! ProcessPayments
 
-      case RetryTransaction(payments, account) =>
+    }
+
+    val retryPayments: PartialFunction[Any, Unit] = {
+      case RetryPayments(payments, account) =>
         repo.retry(payments.flatMap(_.id))
         accountCache.retireAccount(account)
         context.become(state(nextKnownPaymentDate = Some(ZonedDateTime.now())))
         self ! ProcessPayments
+    }
 
-      // Add a new account to the pool
+    // Add a new account to the pool, or update the details
+    val updateAccount: PartialFunction[Any, Unit] = {
       case UpdateAccount(accn) =>
         accountCache.returnAccount(accn)
+    }
 
-      // Fetch details of account
+    // Fetch account details from the network, and trigger update.
+    val registerAccount: PartialFunction[Any, Unit] = {
       case RegisterAccount(kp) =>
         logger.debug(s"[${kp.accountId}] details being obtained from Horizon.")
         network.account(kp).onComplete {
@@ -147,17 +172,8 @@ class PaymentProcessor @Inject()(repo: PaymentRepo,
           case Failure(t) => logger.warn(s"Unable to register account ${kp.accountId}", t)
         }
     }
+
   }
-
-  private case object ProcessPayments
-  private case object UpdateNextPaymentTime
-  private case class RegisterAccount(publicKey: PublicKeyOps)
-  private case class Confirm(payments: Seq[Payment], account: Account)
-  private case class RejectPayments(payments: Seq[Payment], operationResults: Seq[OperationResult], account: Account, updatedSeqNo: Boolean)
-  private case class RejectTransaction(payments: Seq[Payment], account: Account, updatedSeqNo: Boolean)
-  private case class RetryTransaction(payments: Seq[Payment], account: Account)
-  private case class UpdateAccount(accn: Account)
-
 }
 
 class PaymentProcessorModule extends Module {
@@ -168,3 +184,16 @@ class PaymentProcessorModule extends Module {
     )
 }
 
+object PaymentProcessor {
+
+  sealed trait Commands
+  case object ProcessPayments extends Commands
+  case object UpdateNextPaymentTime extends Commands
+  case class RegisterAccount(publicKey: PublicKeyOps) extends Commands
+  case class Confirm(payments: Seq[Payment], account: Account) extends Commands
+  case class RejectPayments(payments: Seq[Payment], operationResults: Seq[OperationResult], account: Account, updatedSeqNo: Boolean) extends Commands
+  case class RejectTransaction(payments: Seq[Payment], account: Account, updatedSeqNo: Boolean) extends Commands
+  case class RetryPayments(payments: Seq[Payment], account: Account) extends Commands
+  case class UpdateAccount(accn: Account) extends Commands
+
+}
