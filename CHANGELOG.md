@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## Next version
+
+- Updated Stellar SDK to accommodate for changes in Horizon v0.17.0
+
+
 ## v0.1.1 - 2017-02-16
 
 ### Added
