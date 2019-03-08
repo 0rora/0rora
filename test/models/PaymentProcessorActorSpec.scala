@@ -31,7 +31,22 @@ class PaymentProcessorActorSpec extends TestKit(ActorSystem("payment-processor-s
 
     //      val results = sampleOf(Gen.listOfN(3, genPaymentOpResultFailure))
 
-    "mark payments as failed and retry payments, updating sequence number" in {
+    "confirm successful payments and return account to pool" in {
+      val (_, conf, repo, _) = setup
+      val cache = mock[AccountCache]
+      val actor = system.actorOf(Props(new PaymentProcessorActor(repo, cache, conf)))
+      val account = sampleOf(genAccount)
+      val payments = sampleOf(Gen.listOfN(3, genPayment))
+
+      actor ! Confirm(payments, account)
+
+      eventually(timeout(5 seconds)) {
+        verify(repo).confirm(payments.flatMap(_.id))
+        verify(cache).returnAccount(account.withIncSeq)
+      }
+    }
+
+    "mark transaction as failed and retry payments, updating sequence number" in {
       val (_, conf, repo, _) = setup
       val cache = mock[AccountCache]
       val probe = TestProbe()
@@ -50,7 +65,7 @@ class PaymentProcessorActorSpec extends TestKit(ActorSystem("payment-processor-s
       verify(cache).returnAccount(account.withIncSeq)
     }
 
-    "mark payments as failed and retry payments, without updating sequence number" in {
+    "mark transaction as failed and retry payments, without updating sequence number" in {
       val (_, conf, repo, _) = setup
       val cache = mock[AccountCache]
       val probe = TestProbe()
