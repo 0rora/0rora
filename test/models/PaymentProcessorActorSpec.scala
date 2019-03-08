@@ -5,8 +5,8 @@ import java.time.ZonedDateTime
 import akka.actor.{ActorSystem, Props}
 import akka.testkit.{ImplicitSender, TestKit, TestProbe}
 import com.typesafe.config.{Config, ConfigFactory}
-import models.Generators.{genAccount, genPayment, sampleOf}
-import models.PaymentProcessor.{ProcessPayments, RegisterAccount, RetryPayments, UpdateAccount}
+import models.Generators.{genAccount, genPayment, genPaymentOpResultFailure, sampleOf}
+import models.PaymentProcessor._
 import models.repo.PaymentRepo
 import org.mockito.Mockito
 import org.mockito.Mockito.verify
@@ -28,6 +28,46 @@ class PaymentProcessorActorSpec extends TestKit(ActorSystem("payment-processor-s
   private val accountB = KeyPair.fromPassphrase("account b").asPublicKey
 
   "a payment processor" must {
+
+    //      val results = sampleOf(Gen.listOfN(3, genPaymentOpResultFailure))
+
+    "mark payments as failed and retry payments, updating sequence number" in {
+      val (_, conf, repo, _) = setup
+      val cache = mock[AccountCache]
+      val probe = TestProbe()
+      val actor = system.actorOf(Props(new PaymentProcessorActor(repo, cache, conf){
+        override def processPayments(nextKnownPaymentDate: Option[ZonedDateTime]): PartialFunction[Any, Unit] = {
+          case ProcessPayments => probe.ref ! ProcessPayments
+        }
+      }))
+      val account = sampleOf(genAccount)
+      val payments = sampleOf(Gen.listOfN(3, genPayment))
+
+      actor ! RejectTransaction(payments, account, updatedSeqNo = true)
+
+      probe.expectMsg(ProcessPayments)
+      verify(repo).reject(payments.flatMap(_.id))
+      verify(cache).returnAccount(account.withIncSeq)
+    }
+
+    "mark payments as failed and retry payments, without updating sequence number" in {
+      val (_, conf, repo, _) = setup
+      val cache = mock[AccountCache]
+      val probe = TestProbe()
+      val actor = system.actorOf(Props(new PaymentProcessorActor(repo, cache, conf){
+        override def processPayments(nextKnownPaymentDate: Option[ZonedDateTime]): PartialFunction[Any, Unit] = {
+          case ProcessPayments => probe.ref ! ProcessPayments
+        }
+      }))
+      val account = sampleOf(genAccount)
+      val payments = sampleOf(Gen.listOfN(3, genPayment))
+
+      actor ! RejectTransaction(payments, account, updatedSeqNo = false)
+
+      probe.expectMsg(ProcessPayments)
+      verify(repo).reject(payments.flatMap(_.id))
+      verify(cache).returnAccount(account)
+    }
 
     "mark payments as requiring a retry and immediately retry them" in {
       val (_, conf, repo, _) = setup

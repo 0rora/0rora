@@ -148,7 +148,6 @@ class PaymentProcessorActor(repo: PaymentRepo, accountCache: AccountCache, confi
       val account_ = if (updatedSeqNo) account.withIncSeq else account
       accountCache.returnAccount(account_)
       self ! ProcessPayments
-
   }
 
   val retryPayments: PartialFunction[Any, Unit] = {

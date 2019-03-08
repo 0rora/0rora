@@ -5,6 +5,7 @@ import java.time.{ZoneId, ZonedDateTime}
 import org.scalacheck.Gen
 import stellar.sdk.KeyPair
 import stellar.sdk.model.Account
+import stellar.sdk.model.result._
 
 import scala.annotation.tailrec
 
@@ -57,4 +58,14 @@ object Generators {
     segments <- Gen.listOfN(segmentCount, Gen.identifier)
   } yield s"$schema://$host:$port/${segments.mkString("/")}"
 
+  def genPaymentOpResultFailure: Gen[PaymentResult] = Gen.oneOf(
+    PaymentMalformed,
+    PaymentUnderfunded,
+    PaymentSourceNoTrust,
+    PaymentSourceNotAuthorised,
+    PaymentNoDestination,
+    PaymentDestinationNoTrust,
+    PaymentDestinationNotAuthorised,
+    PaymentDestinationLineFull,
+    PaymentNoIssuer)
 }
