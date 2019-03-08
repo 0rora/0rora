@@ -130,11 +130,11 @@ class PaymentProcessorActor(repo: PaymentRepo, accountCache: AccountCache, confi
   // Mark these payments as failed and handle account
   val rejectPayments: PartialFunction[Any, Unit] = {
     case RejectPayments(payments, opResults, account, updatedSeqNo) =>
-      val operationResults = if (opResults.forall(_ == PaymentSuccess)) opResults.map(_ => "OK") else
-        opResults.map {
-          case PaymentSuccess | CreateAccountSuccess => "Batch Failure"
-          case x => x.getClass.getSimpleName.replaceAll("([a-z])([A-Z])", "$1 $2").replaceFirst("\\$$", "")
-        }
+      // val operationResults = if (opResults.forall(_ == PaymentSuccess)) opResults.map(_ => "OK") else // todo - is this still required?
+      val operationResults = opResults.map {
+        case PaymentSuccess | CreateAccountSuccess => "Batch Failure"
+        case x => x.getClass.getSimpleName.replaceAll("([a-z])([A-Z])", "$1 $2").replaceFirst("\\$$", "")
+      }
       repo.rejectWithOpResult(payments.zip(operationResults).flatMap { case (p, r) => p.id.map(_ -> r) })
       val account_ = if (updatedSeqNo) account.withIncSeq else account
       accountCache.returnAccount(account_)
