@@ -2,7 +2,9 @@ package models
 
 import java.time.ZonedDateTime
 
+import akka.NotUsed
 import akka.actor.{ActorSystem, Props}
+import akka.stream.scaladsl.{Flow, Sink}
 import akka.testkit.{ImplicitSender, TestKit, TestProbe}
 import com.typesafe.config.{Config, ConfigFactory}
 import models.Generators._
@@ -20,6 +22,8 @@ import stellar.sdk.model.response.AccountResponse
 import stellar.sdk.model.result.{CreateAccountSuccess, OperationResult, PaymentSuccess}
 import stellar.sdk.model.{Account, Thresholds}
 import stellar.sdk.{KeyPair, Network}
+
+import scala.collection.mutable
 
 class PaymentProcessorActorSpec extends TestKit(ActorSystem("payment-processor-spec", TestKitConfig.conf)) with ImplicitSender
   with WordSpecLike with Matchers with BeforeAndAfterAll with MockitoSugar with Eventually with SpanSugar {
@@ -109,6 +113,56 @@ class PaymentProcessorActorSpec extends TestKit(ActorSystem("payment-processor-s
       eventually(timeout(5 seconds)) {
         // it should be called a second time, when zero payments are found
         verify(repo, times(2)).earliestTimeDue
+      }
+    }
+
+    "process payments when time and accounts are lined-up" in {
+      val (_, conf, repo, cache) = setup
+      val sunk: mutable.Buffer[(Seq[Payment], Account)] = mutable.Buffer.empty
+      val actor = system.actorOf(Props(new PaymentProcessorActor(repo, cache, conf) {
+        override val paymentSink: Sink[(Seq[Payment], Account), NotUsed] = Flow[(Seq[Payment], Account)]
+          .alsoTo(Sink.foreach[(Seq[Payment], Account)](tpl => sunk.append(tpl)))
+          .to(Sink.ignore)
+      }))
+      val account = sampleOf(genAccount)
+      val payments = sampleOf(Gen.listOfN(3, genPayment))
+      val date = ZonedDateTime.now().minusSeconds(1)
+      when(repo.earliestTimeDue).thenReturn(Some(date))
+      when(repo.due(100)).thenReturn(payments)
+
+      actor ! UpdateAccount(account)
+      actor ! UpdateNextPaymentTime
+      actor ! ProcessPayments
+
+      eventually(timeout(5 seconds)) {
+        assert(sunk.contains((payments, account)))
+      }
+    }
+
+    "process payments in batches" in {
+      val (_, conf, repo, cache) = setup
+      val sunk: mutable.Buffer[(Seq[Payment], Account)] = mutable.Buffer.empty
+      val actor = system.actorOf(Props(new PaymentProcessorActor(repo, cache, conf) {
+        override val paymentSink: Sink[(Seq[Payment], Account), NotUsed] = Flow[(Seq[Payment], Account)]
+          .alsoTo(Sink.foreach[(Seq[Payment], Account)](tpl => sunk.append(tpl)))
+          .to(Sink.ignore)
+      }))
+      val Seq(account1, account2) = sampleOf(Gen.listOfN(2, genAccount))
+      val payments = sampleOf(Gen.listOfN(150, genPayment))
+      val date = ZonedDateTime.now().minusSeconds(1)
+      when(repo.earliestTimeDue).thenReturn(Some(date))
+      when(repo.due(200)).thenReturn(payments)
+
+      actor ! UpdateAccount(account1)
+      actor ! UpdateAccount(account2)
+      actor ! UpdateNextPaymentTime
+      actor ! ProcessPayments
+
+      eventually(timeout(5 seconds)) {
+        assert(
+          sunk.equals(Seq((payments.take(100), account1), (payments.drop(100), account2))) ||
+            sunk.equals(Seq((payments.take(100), account2), (payments.drop(100), account1)))
+        )
       }
     }
 
