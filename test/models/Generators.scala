@@ -6,7 +6,17 @@ import org.scalacheck.Gen
 import stellar.sdk.KeyPair
 import stellar.sdk.model.Account
 
+import scala.annotation.tailrec
+
 object Generators {
+
+  @tailrec
+  def sampleOf[T](gen: Gen[T], tries: Int = 100): T = gen.sample match {
+    case Some(t) => t
+    case None =>
+      require(tries > 0, "exhausted attempts to sample")
+      sampleOf(gen, tries - 1)
+  }
 
   def genScheduledPayment: Gen[Payment] = for {
     id <- Gen.posNum[Long]

@@ -1,10 +1,16 @@
 package models
 
+import java.time.ZonedDateTime
+
 import akka.actor.{ActorSystem, Props}
-import akka.testkit.{ImplicitSender, TestKit}
+import akka.testkit.{ImplicitSender, TestKit, TestProbe}
 import com.typesafe.config.{Config, ConfigFactory}
-import models.PaymentProcessor.{RegisterAccount, UpdateAccount}
+import models.Generators.{genAccount, genPayment, sampleOf}
+import models.PaymentProcessor.{ProcessPayments, RegisterAccount, RetryPayments, UpdateAccount}
 import models.repo.PaymentRepo
+import org.mockito.Mockito
+import org.mockito.Mockito.verify
+import org.scalacheck.Gen
 import org.scalatest.concurrent.Eventually
 import org.scalatest.mockito.MockitoSugar
 import org.scalatest.time.SpanSugar
@@ -22,6 +28,26 @@ class PaymentProcessorActorSpec extends TestKit(ActorSystem("payment-processor-s
   private val accountB = KeyPair.fromPassphrase("account b").asPublicKey
 
   "a payment processor" must {
+
+    "mark payments as requiring a retry and immediately retry them" in {
+      val (_, conf, repo, _) = setup
+      val cache = mock[AccountCache]
+      val probe = TestProbe()
+      val actor = system.actorOf(Props(new PaymentProcessorActor(repo, cache, conf){
+        override def processPayments(nextKnownPaymentDate: Option[ZonedDateTime]): PartialFunction[Any, Unit] = {
+          case ProcessPayments => probe.ref ! ProcessPayments
+        }
+      }))
+      val account = sampleOf(genAccount)
+      val payments = sampleOf(Gen.listOfN(3, genPayment))
+
+      actor ! RetryPayments(payments, account)
+
+      probe.expectMsg(ProcessPayments)
+      verify(repo).retry(payments.flatMap(_.id))
+      verify(cache).retireAccount(account)
+    }
+
     "update an account" in {
       val (_, conf, repo, cache) = setup
       val account = Account(accountA, 100)
