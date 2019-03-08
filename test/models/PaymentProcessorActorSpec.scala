@@ -5,11 +5,12 @@ import java.time.ZonedDateTime
 import akka.actor.{ActorSystem, Props}
 import akka.testkit.{ImplicitSender, TestKit, TestProbe}
 import com.typesafe.config.{Config, ConfigFactory}
-import models.Generators.{genAccount, genPayment, genPaymentOpResultFailure, sampleOf}
+import models.Generators._
 import models.PaymentProcessor._
 import models.repo.PaymentRepo
-import org.mockito.Mockito
-import org.mockito.Mockito.verify
+import org.mockito.ArgumentMatchers.anyInt
+import org.mockito.{ArgumentMatchers, Mockito}
+import org.mockito.Mockito._
 import org.scalacheck.Gen
 import org.scalatest.concurrent.Eventually
 import org.scalatest.mockito.MockitoSugar
@@ -29,6 +30,105 @@ class PaymentProcessorActorSpec extends TestKit(ActorSystem("payment-processor-s
   private val accountB = KeyPair.fromPassphrase("account b").asPublicKey
 
   "a payment processor" must {
+
+    "not attempt to process payments if there is no next payment time" in {
+      val (_, conf, repo, _) = setup
+      val cache = mock[AccountCache]
+      val actor = system.actorOf(Props(new PaymentProcessorActor(repo, cache, conf)))
+      val account = sampleOf(genAccount)
+
+      actor ! ProcessPayments
+
+      // this is just a synthetic wait to ensure that the first message has been dealt with
+      actor ! UpdateAccount(account)
+      eventually(timeout(5 seconds)) {
+        verify(cache).returnAccount(account)
+      }
+
+      // the assertion we actually care about
+      verify(cache, never()).readyCount
+    }
+
+    "not attempt to process payments if the payments are not yet due" in {
+      val (_, conf, repo, cache) = setup
+      val actor = system.actorOf(Props(new PaymentProcessorActor(repo, cache, conf)))
+      val account = sampleOf(genAccount)
+      cache.returnAccount(account)
+      val date = ZonedDateTime.now().plusHours(1)
+
+      when(repo.earliestTimeDue).thenReturn(Some(date))
+      actor ! UpdateNextPaymentTime
+
+      actor ! ProcessPayments
+
+      // this is just a synthetic wait to ensure that the first messages have been dealt with
+      actor ! UpdateAccount(account)
+      eventually(timeout(5 seconds)) {
+        assert(cache.borrowAccount.nonEmpty)
+      }
+
+      verify(repo).earliestTimeDue
+      // ensures that we haven't entered the main payment processing block
+      verify(repo, never()).due(anyInt)
+    }
+
+    "not attempt to process payments if there payments are due, but there are no free accounts" in {
+      val (_, conf, repo, cache) = setup
+      val actor = system.actorOf(Props(new PaymentProcessorActor(repo, cache, conf)))
+      val account = sampleOf(genAccount)
+      val date = ZonedDateTime.now()
+
+      when(repo.earliestTimeDue).thenReturn(Some(date))
+      actor ! UpdateNextPaymentTime
+
+      actor ! ProcessPayments
+
+      // this is just a synthetic wait to ensure that the first messages have been dealt with
+      actor ! UpdateAccount(account)
+      eventually(timeout(5 seconds)) {
+        assert(cache.borrowAccount.nonEmpty)
+      }
+
+      // ensures that we haven't entered the main payment processing block
+      verify(repo, never()).due(anyInt)
+    }
+
+    "not attempt to process payments if, somehow, there are no payments due" in {
+      val (_, conf, repo, cache) = setup
+      val actor = system.actorOf(Props(new PaymentProcessorActor(repo, cache, conf)))
+      val account = sampleOf(genAccount)
+      val date = ZonedDateTime.now().minusSeconds(1)
+      cache.returnAccount(account)
+
+      when(repo.earliestTimeDue).thenReturn(Some(date))
+      actor ! UpdateNextPaymentTime
+
+      when(repo.due(100)).thenReturn(Seq.empty)
+      actor ! ProcessPayments
+
+      eventually(timeout(5 seconds)) {
+        // it should be called a second time, when zero payments are found
+        verify(repo, times(2)).earliestTimeDue
+      }
+    }
+
+    "update the next payment time" in {
+      val (_, conf, repo, _) = setup
+      val cache = mock[AccountCache]
+      val actor = system.actorOf(Props(new PaymentProcessorActor(repo, cache, conf)))
+      val date = ZonedDateTime.now()
+
+      when(repo.earliestTimeDue).thenReturn(Some(date))
+      when(cache.readyCount).thenReturn(0)
+
+      actor ! UpdateNextPaymentTime
+      actor ! ProcessPayments
+
+      eventually(timeout(5 seconds)) {
+        verify(repo).earliestTimeDue // shows that the db was queried
+        verify(cache).readyCount     // shows that the cache was inspected on payment attempt, because date was found in context
+      }
+    }
 
     "confirm successful payments and return account to pool" in {
       val (_, conf, repo, _) = setup
