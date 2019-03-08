@@ -10,6 +10,7 @@ import stellar.sdk.model.response.{AccountResponse, TransactionPostResponse}
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.reflect.ClassTag
+import scala.util.Failure
 
 case class StubNetwork() extends Network {
   override def passphrase: String = "stub network"
@@ -28,7 +29,6 @@ case class StubNetwork() extends Network {
     this
   }
 
-  override def account(pk: PublicKeyOps)(implicit ec: ExecutionContext): Future[AccountResponse] = Future(
-    expectedAccounts(pk)
-  )
+  override def account(pk: PublicKeyOps)(implicit ec: ExecutionContext): Future[AccountResponse] =
+    Future(expectedAccounts(pk))
 }

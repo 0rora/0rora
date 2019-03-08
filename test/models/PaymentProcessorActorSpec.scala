@@ -2,6 +2,7 @@ package models
 
 import akka.actor.{ActorSystem, Props}
 import akka.testkit.{ImplicitSender, TestKit}
+import com.typesafe.config.{Config, ConfigFactory}
 import models.PaymentProcessor.{RegisterAccount, UpdateAccount}
 import models.repo.PaymentRepo
 import org.scalatest.concurrent.Eventually
@@ -12,12 +13,13 @@ import stellar.sdk.model.response.AccountResponse
 import stellar.sdk.model.{Account, Thresholds}
 import stellar.sdk.{KeyPair, Network}
 
-class PaymentProcessorActorSpec extends TestKit(ActorSystem("payment-processor-spec")) with ImplicitSender
+class PaymentProcessorActorSpec extends TestKit(ActorSystem("payment-processor-spec", TestKitConfig.conf)) with ImplicitSender
   with WordSpecLike with Matchers with BeforeAndAfterAll with MockitoSugar with Eventually with SpanSugar {
 
   override def afterAll: Unit = TestKit.shutdownActorSystem(system)
 
   private val accountA = KeyPair.fromPassphrase("account a").asPublicKey
+  private val accountB = KeyPair.fromPassphrase("account b").asPublicKey
 
   "a payment processor" must {
     "update an account" in {
@@ -48,6 +50,25 @@ class PaymentProcessorActorSpec extends TestKit(ActorSystem("payment-processor-s
         assert(cache.borrowAccount.contains(account.withIncSeq))
       }
     }
+
+    "fetch an account from the configured network, ignoring failures" in {
+      val (network, conf, repo, cache) = setup
+      val account = Account(accountA, 101)
+
+      network.expectAccount(accountA,
+        AccountResponse(accountA, 101, 0, Thresholds(1, 2, 3), authRequired = false, authRevocable = true, Nil, Nil)
+      )
+
+      val actor = system.actorOf(Props(new PaymentProcessorActor(repo, cache, conf)))
+
+      actor ! RegisterAccount(accountB)
+      actor ! RegisterAccount(accountA)
+
+      // we only expect account A to be found. The failed lookup for account B should no-op.
+      eventually(timeout(5 seconds)) {
+        assert(cache.borrowAccount.contains(account.withIncSeq))
+      }
+    }
   }
 
   private def setup: (StubNetwork, AppConfig, PaymentRepo, AccountCache) = {
@@ -60,4 +81,13 @@ class PaymentProcessorActorSpec extends TestKit(ActorSystem("payment-processor-s
     (n, conf, repo, new AccountCache)
   }
 
+}
+
+
+object TestKitConfig {
+  val conf: Config = ConfigFactory.parseString(
+    """
+      |akka.loglevel = "OFF"
+      |0rora.loglevel = "OFF"
+    """.stripMargin)
 }
