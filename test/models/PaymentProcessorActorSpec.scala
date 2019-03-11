@@ -19,6 +19,7 @@ import org.scalatest.mockito.MockitoSugar
 import org.scalatest.time.SpanSugar
 import org.scalatest.{BeforeAndAfterAll, Matchers, WordSpecLike}
 import stellar.sdk.model.response.{AccountResponse, TransactionRejected}
+import stellar.sdk.model.result.TransactionResult.{BadSequenceNumber, InsufficientBalance, UnusedSignatures}
 import stellar.sdk.model.result._
 import stellar.sdk.model.{Account, NativeAmount, Thresholds}
 import stellar.sdk.util.ByteArrays
@@ -409,7 +410,77 @@ class PaymentProcessorActorSpec extends TestKit(ActorSystem("payment-processor-s
 
       Source.single(payments -> account).runWith(sink)
 
-      probe.expectMsg(RejectPayments(payments, Seq(PaymentUnderfunded), account, true))
+      probe.expectMsg(RejectPayments(payments, Seq(PaymentUnderfunded), account, updatedSeqNo = true))
+      assert(n.posted.size == 1)
+    }
+
+    "submit to the network and process rejection when there's insufficient balance" in {
+      implicit val m: ActorMaterializer = ActorMaterializer()
+
+      val n = StubNetwork(respondWith = TransactionRejected(1, "", "", Nil, "",
+        ByteArrays.base64(TransactionNotAttempted(InsufficientBalance, NativeAmount(0)).encode)
+      ))
+      val kp = KeyPair.random
+      val conf = new AppConfig {
+        val network: Network = n
+        val accounts: Map[String, KeyPair] = Map(kp.accountId -> kp)
+      }
+
+      val account = sampleOf(genAccount).copy(publicKey = kp)
+      val payments = sampleOf(Gen.listOfN(3, genPayment)).map(_.copy(source = kp))
+      val probe = new TestProbe(system)
+      val sink = PaymentProcessor.paymentSink(probe.ref, conf)
+
+      Source.single(payments -> account).runWith(sink)
+
+      probe.expectMsg(RetryPayments(payments, account))
+      assert(n.posted.size == 1)
+    }
+
+    "submit to the network and process rejection due to a bad sequence number" in {
+      implicit val m: ActorMaterializer = ActorMaterializer()
+
+      val n = StubNetwork(respondWith = TransactionRejected(1, "", "", Nil, "",
+        ByteArrays.base64(TransactionNotAttempted(BadSequenceNumber, NativeAmount(0)).encode)
+      ))
+      val kp = KeyPair.random
+      val conf = new AppConfig {
+        val network: Network = n
+        val accounts: Map[String, KeyPair] = Map(kp.accountId -> kp)
+      }
+
+      val account = sampleOf(genAccount).copy(publicKey = kp)
+      val payments = sampleOf(Gen.listOfN(3, genPayment)).map(_.copy(source = kp))
+      val probe = new TestProbe(system)
+      val sink = PaymentProcessor.paymentSink(probe.ref, conf)
+
+      Source.single(payments -> account).runWith(sink)
+
+      probe.expectMsg(RetryPayments(payments, account))
+      probe.expectMsg(RegisterAccount(account.publicKey))
+      assert(n.posted.size == 1)
+    }
+
+    "submit to the network and process rejection due to some other reason" in {
+      implicit val m: ActorMaterializer = ActorMaterializer()
+
+      val n = StubNetwork(respondWith = TransactionRejected(1, "", "", Nil, "",
+        ByteArrays.base64(TransactionNotAttempted(UnusedSignatures, NativeAmount(0)).encode)
+      ))
+      val kp = KeyPair.random
+      val conf = new AppConfig {
+        val network: Network = n
+        val accounts: Map[String, KeyPair] = Map(kp.accountId -> kp)
+      }
+
+      val account = sampleOf(genAccount).copy(publicKey = kp)
+      val payments = sampleOf(Gen.listOfN(3, genPayment)).map(_.copy(source = kp))
+      val probe = new TestProbe(system)
+      val sink = PaymentProcessor.paymentSink(probe.ref, conf)
+
+      Source.single(payments -> account).runWith(sink)
+
+      probe.expectMsg(RejectTransaction(payments, account, updatedSeqNo = false))
       assert(n.posted.size == 1)
     }
   }
