@@ -4,14 +4,14 @@ import java.time.ZonedDateTime
 
 import akka.NotUsed
 import akka.actor.{ActorSystem, Props}
-import akka.stream.scaladsl.{Flow, Sink}
+import akka.stream.ActorMaterializer
+import akka.stream.scaladsl.{Flow, Sink, Source}
 import akka.testkit.{ImplicitSender, TestKit, TestProbe}
 import com.typesafe.config.{Config, ConfigFactory}
 import models.Generators._
 import models.PaymentProcessor._
 import models.repo.PaymentRepo
 import org.mockito.ArgumentMatchers.anyInt
-import org.mockito.{ArgumentMatchers, Mockito}
 import org.mockito.Mockito._
 import org.scalacheck.Gen
 import org.scalatest.concurrent.Eventually
@@ -23,9 +23,10 @@ import stellar.sdk.model.result.{CreateAccountSuccess, OperationResult, PaymentS
 import stellar.sdk.model.{Account, Thresholds}
 import stellar.sdk.{KeyPair, Network}
 
+import scala.concurrent.ExecutionContext.Implicits.global
 import scala.collection.mutable
 
-class PaymentProcessorActorSpec extends TestKit(ActorSystem("payment-processor-spec", TestKitConfig.conf)) with ImplicitSender
+class PaymentProcessorActorSpec extends TestKit(ActorSystem("payment-processor-spec")) with ImplicitSender
   with WordSpecLike with Matchers with BeforeAndAfterAll with MockitoSugar with Eventually with SpanSugar {
 
   override def afterAll: Unit = TestKit.shutdownActorSystem(system)
@@ -120,7 +121,7 @@ class PaymentProcessorActorSpec extends TestKit(ActorSystem("payment-processor-s
       val (_, conf, repo, cache) = setup
       val sunk: mutable.Buffer[(Seq[Payment], Account)] = mutable.Buffer.empty
       val actor = system.actorOf(Props(new PaymentProcessorActor(repo, cache, conf) {
-        override val paymentSink: Sink[(Seq[Payment], Account), NotUsed] = Flow[(Seq[Payment], Account)]
+        override val sink: Sink[(Seq[Payment], Account), NotUsed] = Flow[(Seq[Payment], Account)]
           .alsoTo(Sink.foreach[(Seq[Payment], Account)](tpl => sunk.append(tpl)))
           .to(Sink.ignore)
       }))
@@ -143,7 +144,7 @@ class PaymentProcessorActorSpec extends TestKit(ActorSystem("payment-processor-s
       val (_, conf, repo, cache) = setup
       val sunk: mutable.Buffer[(Seq[Payment], Account)] = mutable.Buffer.empty
       val actor = system.actorOf(Props(new PaymentProcessorActor(repo, cache, conf) {
-        override val paymentSink: Sink[(Seq[Payment], Account), NotUsed] = Flow[(Seq[Payment], Account)]
+        override val sink: Sink[(Seq[Payment], Account), NotUsed] = Flow[(Seq[Payment], Account)]
           .alsoTo(Sink.foreach[(Seq[Payment], Account)](tpl => sunk.append(tpl)))
           .to(Sink.ignore)
       }))
@@ -180,7 +181,7 @@ class PaymentProcessorActorSpec extends TestKit(ActorSystem("payment-processor-s
 
       eventually(timeout(5 seconds)) {
         verify(repo).earliestTimeDue // shows that the db was queried
-        verify(cache).readyCount     // shows that the cache was inspected on payment attempt, because date was found in context
+        verify(cache).readyCount // shows that the cache was inspected on payment attempt, because date was found in context
       }
     }
 
@@ -203,7 +204,7 @@ class PaymentProcessorActorSpec extends TestKit(ActorSystem("payment-processor-s
       val (_, conf, repo, _) = setup
       val cache = mock[AccountCache]
       val probe = TestProbe()
-      val actor = system.actorOf(Props(new PaymentProcessorActor(repo, cache, conf){
+      val actor = system.actorOf(Props(new PaymentProcessorActor(repo, cache, conf) {
         override def processPayments(nextKnownPaymentDate: Option[ZonedDateTime]): PartialFunction[Any, Unit] = {
           case ProcessPayments => probe.ref ! ProcessPayments
         }
@@ -223,7 +224,7 @@ class PaymentProcessorActorSpec extends TestKit(ActorSystem("payment-processor-s
       val (_, conf, repo, _) = setup
       val cache = mock[AccountCache]
       val probe = TestProbe()
-      val actor = system.actorOf(Props(new PaymentProcessorActor(repo, cache, conf){
+      val actor = system.actorOf(Props(new PaymentProcessorActor(repo, cache, conf) {
         override def processPayments(nextKnownPaymentDate: Option[ZonedDateTime]): PartialFunction[Any, Unit] = {
           case ProcessPayments => probe.ref ! ProcessPayments
         }
@@ -243,7 +244,7 @@ class PaymentProcessorActorSpec extends TestKit(ActorSystem("payment-processor-s
       val (_, conf, repo, _) = setup
       val cache = mock[AccountCache]
       val probe = TestProbe()
-      val actor = system.actorOf(Props(new PaymentProcessorActor(repo, cache, conf){
+      val actor = system.actorOf(Props(new PaymentProcessorActor(repo, cache, conf) {
         override def processPayments(nextKnownPaymentDate: Option[ZonedDateTime]): PartialFunction[Any, Unit] = {
           case ProcessPayments => probe.ref ! ProcessPayments
         }
@@ -264,7 +265,7 @@ class PaymentProcessorActorSpec extends TestKit(ActorSystem("payment-processor-s
       val (_, conf, repo, _) = setup
       val cache = mock[AccountCache]
       val probe = TestProbe()
-      val actor = system.actorOf(Props(new PaymentProcessorActor(repo, cache, conf){
+      val actor = system.actorOf(Props(new PaymentProcessorActor(repo, cache, conf) {
         override def processPayments(nextKnownPaymentDate: Option[ZonedDateTime]): PartialFunction[Any, Unit] = {
           case ProcessPayments => probe.ref ! ProcessPayments
         }
@@ -283,7 +284,7 @@ class PaymentProcessorActorSpec extends TestKit(ActorSystem("payment-processor-s
       val (_, conf, repo, _) = setup
       val cache = mock[AccountCache]
       val probe = TestProbe()
-      val actor = system.actorOf(Props(new PaymentProcessorActor(repo, cache, conf){
+      val actor = system.actorOf(Props(new PaymentProcessorActor(repo, cache, conf) {
         override def processPayments(nextKnownPaymentDate: Option[ZonedDateTime]): PartialFunction[Any, Unit] = {
           case ProcessPayments => probe.ref ! ProcessPayments
         }
@@ -302,7 +303,7 @@ class PaymentProcessorActorSpec extends TestKit(ActorSystem("payment-processor-s
       val (_, conf, repo, _) = setup
       val cache = mock[AccountCache]
       val probe = TestProbe()
-      val actor = system.actorOf(Props(new PaymentProcessorActor(repo, cache, conf){
+      val actor = system.actorOf(Props(new PaymentProcessorActor(repo, cache, conf) {
         override def processPayments(nextKnownPaymentDate: Option[ZonedDateTime]): PartialFunction[Any, Unit] = {
           case ProcessPayments => probe.ref ! ProcessPayments
         }
@@ -366,11 +367,35 @@ class PaymentProcessorActorSpec extends TestKit(ActorSystem("payment-processor-s
     }
   }
 
+  "the payment sink" should {
+    "submit to the network" in {
+      implicit val m: ActorMaterializer = ActorMaterializer()
+
+      val n = StubNetwork()
+      val kp = KeyPair.random
+      val conf = new AppConfig {
+        val network: Network = n
+        val accounts: Map[String, KeyPair] = Map(kp.accountId -> kp)
+      }
+
+      val account = sampleOf(genAccount).copy(publicKey = kp)
+      val payments = sampleOf(Gen.listOfN(3, genPayment)).map(_.copy(source = kp))
+      val probe = new TestProbe(system)
+      val sink = PaymentProcessor.paymentSink(probe.ref, conf)
+
+      Source.single(payments -> account).runWith(sink)
+
+      probe.expectMsg(Confirm(payments, account))
+      assert(n.posted.size == 1)
+    }
+  }
+
   private def setup: (StubNetwork, AppConfig, PaymentRepo, AccountCache) = {
     val n = StubNetwork()
+    val kp = KeyPair.random
     val conf = new AppConfig {
       val network: Network = n
-      val accounts: Map[String, KeyPair] = Map.empty
+      val accounts: Map[String, KeyPair] = Map(kp.accountId -> kp)
     }
     val repo = mock[PaymentRepo]
     (n, conf, repo, new AccountCache)

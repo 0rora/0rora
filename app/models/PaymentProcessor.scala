@@ -3,7 +3,7 @@ package models
 import java.time.ZonedDateTime
 
 import akka.NotUsed
-import akka.actor.{Actor, ActorSystem, Props}
+import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.{Flow, Sink, Source}
 import javax.inject.{Inject, Singleton}
@@ -18,7 +18,7 @@ import stellar.sdk.model.result._
 import stellar.sdk.model.{Account, Transaction}
 import stellar.sdk.{KeyPair, Network, PublicKeyOps}
 
-import scala.concurrent.ExecutionContextExecutor
+import scala.concurrent.{ExecutionContext, ExecutionContextExecutor}
 import scala.concurrent.duration._
 import scala.util.{Failure, Success}
 
@@ -44,44 +44,7 @@ class PaymentProcessorActor(repo: PaymentRepo, accountCache: AccountCache, confi
   implicit private val network: Network = config.network
   private implicit val ec: ExecutionContextExecutor = context.dispatcher
 
-  private val logger: Logger = Logger("0rora.payment_processor")
-
-  val paymentSink: Sink[(Seq[Payment], Account), NotUsed] = Flow[(Seq[Payment], Account)]
-    .map { case (ps, account) =>
-      val operations = ps.map(_.asOperation)
-      val signers: Seq[KeyPair] =
-        (account.publicKey +: ps.map(_.source)).map(_.accountId).distinct.flatMap(config.accounts.get)
-      logger.debug(s"[${account.publicKey.accountId}] transacting (ops=${operations.size}, seqNo=${account.sequenceNumber})")
-      val txn = Transaction(account, operations).sign(signers.head, signers.tail: _*)
-      txn.submit().map(_ -> ps -> account)
-    }
-    .mapAsync(parallelism = config.accounts.size)(_.map {
-      case ((_: TransactionApproved, ps), account) =>
-        logger.debug(s"[${account.publicKey.accountId}] Successful ${ps.size} payments")
-        self ! Confirm(ps, account)
-
-      case ((x: TransactionRejected, ps), account) =>
-        x.result match {
-          case r@TransactionFailure(_, operationResults) =>
-            logger.debug(s"[${account.publicKey.accountId}] Failure  - ${x.detail} - $operationResults")
-            self ! RejectPayments(ps, operationResults, account, r.sequenceUpdated)
-
-          case r@TransactionNotAttempted(reason, _) =>
-            logger.debug(s"[${account.publicKey.accountId}] Not attempted because $reason")
-            reason match {
-              case InsufficientBalance =>
-                self ! RetryPayments(ps, account)
-              case BadSequenceNumber =>
-                self ! RetryPayments(ps, account)
-                self ! RegisterAccount(account.publicKey)
-              case _ =>
-                self ! RejectTransaction(ps, account, r.sequenceUpdated)
-            }
-        }
-    })
-    .to(Sink.ignore)
-
-
+  private val logger: Logger = PaymentProcessor.logger
   override def receive: Receive = state(nextKnownPaymentDate = None)
 
   private def state(nextKnownPaymentDate: Option[ZonedDateTime]): Receive =
@@ -94,6 +57,7 @@ class PaymentProcessorActor(repo: PaymentRepo, accountCache: AccountCache, confi
       updateAccount orElse
       registerAccount
 
+  val sink: Sink[(Seq[Payment], Account), NotUsed] = paymentSink(self, config)
 
   // If there are payments due, find and pay them
   def processPayments(nextKnownPaymentDate: Option[ZonedDateTime]): PartialFunction[Any, Unit] = {
@@ -109,8 +73,7 @@ class PaymentProcessorActor(repo: PaymentRepo, accountCache: AccountCache, confi
             payments.grouped(100).flatMap(ps => accountCache.borrowAccount.map(ps -> _)).toSeq
           val submittingPayments: Seq[Payment] = submittingPaymentsWithAccounts.flatMap(_._1)
           repo.submit(submittingPayments.flatMap(_.id), ZonedDateTime.now)
-
-          Source.fromIterator(() => submittingPaymentsWithAccounts.iterator).to(paymentSink).run()
+          Source.fromIterator(() => submittingPaymentsWithAccounts.iterator).to(sink).run()
         }
       }
   }
@@ -194,5 +157,44 @@ object PaymentProcessor {
   case class RejectTransaction(payments: Seq[Payment], account: Account, updatedSeqNo: Boolean) extends Commands
   case class RetryPayments(payments: Seq[Payment], account: Account) extends Commands
   case class UpdateAccount(accn: Account) extends Commands
+
+  val logger: Logger = Logger("0rora.payment_processor")
+
+  def paymentSink(processor: ActorRef, config: AppConfig)(implicit ec: ExecutionContext):
+  Sink[(Seq[Payment], Account), NotUsed] =
+    Flow[(Seq[Payment], Account)]
+      .map { case (ps, account) =>
+        val operations = ps.map(_.asOperation)
+        val signers: Seq[KeyPair] =
+          (account.publicKey +: ps.map(_.source)).map(_.accountId).distinct.flatMap(config.accounts.get)
+        logger.debug(s"[${account.publicKey.accountId}] transacting (ops=${operations.size}, seqNo=${account.sequenceNumber})")
+        val txn = Transaction(account, operations)(config.network).sign(signers.head, signers.tail: _*)
+        txn.submit().map(_ -> ps -> account)
+      }
+      .mapAsync(parallelism = config.accounts.size)(_.map {
+        case ((_: TransactionApproved, ps), account) =>
+          logger.debug(s"[${account.publicKey.accountId}] Successful ${ps.size} payments")
+          processor ! Confirm(ps, account)
+
+        case ((x: TransactionRejected, ps), account) =>
+          x.result match {
+            case r@TransactionFailure(_, operationResults) =>
+              logger.debug(s"[${account.publicKey.accountId}] Failure  - ${x.detail} - $operationResults")
+              processor ! RejectPayments(ps, operationResults, account, r.sequenceUpdated)
+
+            case r@TransactionNotAttempted(reason, _) =>
+              logger.debug(s"[${account.publicKey.accountId}] Not attempted because $reason")
+              reason match {
+                case InsufficientBalance =>
+                  processor ! RetryPayments(ps, account)
+                case BadSequenceNumber =>
+                  processor ! RetryPayments(ps, account)
+                  processor ! RegisterAccount(account.publicKey)
+                case _ =>
+                  processor ! RejectTransaction(ps, account, r.sequenceUpdated)
+              }
+          }
+      })
+      .to(Sink.ignore)
 
 }

@@ -2,13 +2,15 @@ package models
 
 import java.net.URI
 
+import com.google.inject.ImplementedBy
 import javax.inject.{Inject, Singleton}
 import play.api.Configuration
 import stellar.sdk.{KeyPair, Network, PublicNetwork, StandaloneNetwork, TestNetwork}
 
 import scala.collection.JavaConverters._
-import scala.util.{Failure, Try}
+import scala.util.Try
 
+@ImplementedBy(classOf[FileAppConfig])
 trait AppConfig {
   val network: Network
   val accounts: Map[String, KeyPair]
