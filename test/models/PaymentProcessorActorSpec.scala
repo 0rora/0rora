@@ -18,9 +18,10 @@ import org.scalatest.concurrent.Eventually
 import org.scalatest.mockito.MockitoSugar
 import org.scalatest.time.SpanSugar
 import org.scalatest.{BeforeAndAfterAll, Matchers, WordSpecLike}
-import stellar.sdk.model.response.AccountResponse
-import stellar.sdk.model.result.{CreateAccountSuccess, OperationResult, PaymentSuccess}
-import stellar.sdk.model.{Account, Thresholds}
+import stellar.sdk.model.response.{AccountResponse, TransactionRejected}
+import stellar.sdk.model.result._
+import stellar.sdk.model.{Account, NativeAmount, Thresholds}
+import stellar.sdk.util.ByteArrays
 import stellar.sdk.{KeyPair, Network}
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -368,7 +369,7 @@ class PaymentProcessorActorSpec extends TestKit(ActorSystem("payment-processor-s
   }
 
   "the payment sink" should {
-    "submit to the network" in {
+    "submit to the network and process approvals" in {
       implicit val m: ActorMaterializer = ActorMaterializer()
 
       val n = StubNetwork()
@@ -386,6 +387,29 @@ class PaymentProcessorActorSpec extends TestKit(ActorSystem("payment-processor-s
       Source.single(payments -> account).runWith(sink)
 
       probe.expectMsg(Confirm(payments, account))
+      assert(n.posted.size == 1)
+    }
+
+    "submit to the network and process failures" in {
+      implicit val m: ActorMaterializer = ActorMaterializer()
+
+      val n = StubNetwork(respondWith = TransactionRejected(1, "", "", Nil, "",
+        ByteArrays.base64(TransactionFailure(NativeAmount(100), Seq(PaymentUnderfunded)).encode)
+      ))
+      val kp = KeyPair.random
+      val conf = new AppConfig {
+        val network: Network = n
+        val accounts: Map[String, KeyPair] = Map(kp.accountId -> kp)
+      }
+
+      val account = sampleOf(genAccount).copy(publicKey = kp)
+      val payments = sampleOf(Gen.listOfN(3, genPayment)).map(_.copy(source = kp))
+      val probe = new TestProbe(system)
+      val sink = PaymentProcessor.paymentSink(probe.ref, conf)
+
+      Source.single(payments -> account).runWith(sink)
+
+      probe.expectMsg(RejectPayments(payments, Seq(PaymentUnderfunded), account, true))
       assert(n.posted.size == 1)
     }
   }
