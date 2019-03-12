@@ -60,7 +60,6 @@ class PaymentProcessorActorSpec extends TestKit(ActorSystem("payment-processor-s
       val (_, conf, repo, cache) = setup
       val actor = system.actorOf(Props(new PaymentProcessorActor(repo, cache, conf)))
       val account = sampleOf(genAccount)
-      cache.returnAccount(account)
       val date = ZonedDateTime.now().plusHours(1)
 
       when(repo.earliestTimeDue).thenReturn(Some(date))

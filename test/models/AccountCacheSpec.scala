@@ -18,7 +18,7 @@ class AccountCacheSpec extends Specification with ScalaCheck {
       cache.borrowAccount must beSome(a)
       cache.readyCount mustEqual 0
       cache.borrowAccount must beNone
-    }
+    }.set(minTestsOk = 10)
 
     "disallow an account to be borrowed once retired" >> prop { a: Account =>
       val cache = new AccountCache
@@ -29,14 +29,14 @@ class AccountCacheSpec extends Specification with ScalaCheck {
       cache.readyCount mustEqual 0
       cache.borrowAccount must beNone
       cache.readyCount mustEqual 0
-    }
+    }.set(minTestsOk = 10)
 
     "allow the borrowing of multiple accounts" >> prop { as: Seq[Account] =>
       val cache = new AccountCache
       as.foreach(cache.returnAccount)
       val borrowed = Stream.continually(cache.borrowAccount).takeWhile(_.isDefined).flatten
       borrowed must containTheSameElementsAs(as)
-    }
+    }.set(minTestsOk = 10)
 
     "return an account even after it has been modified" >> prop { a: Account =>
       val cache = new AccountCache
@@ -45,7 +45,7 @@ class AccountCacheSpec extends Specification with ScalaCheck {
       val b = a.withIncSeq
       cache.returnAccount(b)
       cache.borrowAccount must beSome(b)
-    }
+    }.set(minTestsOk = 10)
   }
 
 }
