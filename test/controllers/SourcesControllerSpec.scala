@@ -34,7 +34,7 @@ class SourcesControllerSpec(implicit ec: ExecutionEnv) extends PlaySpecification
     "write payments to the repo" >> {
       val payments: List[Payment] = sampleOf(Gen.listOfN(20, genScheduledPayment)).map(_.copy(id = None, received = now))
       val content = payments.map{ p =>
-        s"${p.source.accountId},${p.destination.accountId},XLM,,${p.units},${p.scheduled.format(ISO_OFFSET_DATE_TIME)}"
+        s"${p.source.account},${p.destination.account},XLM,,${p.units},${p.scheduled.format(ISO_OFFSET_DATE_TIME)}"
       }.mkString(System.lineSeparator())
       val eventualResult = result(content)
       val json = contentAsJson(eventualResult.map(_._1))
@@ -49,9 +49,13 @@ class SourcesControllerSpec(implicit ec: ExecutionEnv) extends PlaySpecification
     "ignore bad lines in the csv input" >> {
       val payments: List[Payment] = sampleOf(Gen.listOfN(14, genScheduledPayment)).map(_.copy(id = None, received = now))
       val rubbish: List[String] = sampleOf(Gen.listOfN(14, Gen.identifier))
-      val content = payments.map{ p =>
-        s"${p.source.accountId},${p.destination.accountId},XLM,,${p.units},${p.scheduled.format(ISO_OFFSET_DATE_TIME)}"
-      }.zip(rubbish).mkString(System.lineSeparator())
+      def interleave(l: Seq[String], r: Seq[String], acc: Seq[String] = Nil): Seq[String] = l match {
+        case h +: t if r.nonEmpty => interleave(t, r.tail, h +: r.head +: acc)
+        case _ => acc
+      }
+      val content = interleave(payments.map{ p =>
+        s"${p.source.account},${p.destination.account},XLM,,${p.units},${p.scheduled.format(ISO_OFFSET_DATE_TIME)}"
+      }, rubbish).mkString(System.lineSeparator())
       val eventualResult = result(content)
       val json = contentAsJson(eventualResult.map(_._1))
       val paymentsSunk = eventualResult.map(_._2.map(p => p.copy(received = now, scheduled = p.scheduled.withZoneSameInstant(ZoneId.of("UTC")))))
@@ -67,6 +71,7 @@ class SourcesControllerSpec(implicit ec: ExecutionEnv) extends PlaySpecification
     val repo = mock[PaymentRepo]
     val flows = mutable.Buffer.empty[Payment]
     val writer: Sink[Payment, Future[Done]] = Flow[Payment].toMat(Sink.foreach { p: Payment =>
+      println(p.source)
       flows += p
     })(Keep.right)
     repo.writer returns writer

@@ -12,14 +12,15 @@ import models.repo.PaymentRepo
 import play.api.inject.{Binding, Module}
 import play.api.{Configuration, Environment, Logger}
 import scalikejdbc.{AutoSession, DBSession}
+import stellar.sdk.model.op.PaymentOperation
 import stellar.sdk.model.response.{TransactionApproved, TransactionRejected}
 import stellar.sdk.model.result.TransactionResult.{BadSequenceNumber, InsufficientBalance}
 import stellar.sdk.model.result._
 import stellar.sdk.model.{Account, Transaction}
-import stellar.sdk.{KeyPair, Network, PublicKeyOps}
+import stellar.sdk.{Network, PublicKeyOps}
 
-import scala.concurrent.{ExecutionContext, ExecutionContextExecutor}
 import scala.concurrent.duration._
+import scala.concurrent.{ExecutionContext, ExecutionContextExecutor, Future}
 import scala.util.{Failure, Success}
 
 @Singleton
@@ -164,12 +165,16 @@ object PaymentProcessor {
   Sink[(Seq[Payment], Account), NotUsed] =
     Flow[(Seq[Payment], Account)]
       .map { case (ps, account) =>
-        val operations = ps.map(_.asOperation)
-        val signers: Seq[KeyPair] =
-          (account.publicKey +: ps.map(_.source)).map(_.accountId).distinct.flatMap(config.accounts.get)
-        logger.debug(s"[${account.publicKey.accountId}] transacting (ops=${operations.size}, seqNo=${account.sequenceNumber})")
-        val txn = Transaction(account, operations)(config.network).sign(signers.head, signers.tail: _*)
-        txn.submit().map(_ -> ps -> account)
+        val operations: Future[Seq[PaymentOperation]] = Future.sequence(ps.map(_.asOperation))
+        val paymentSigners: Future[Seq[PublicKeyOps]] = Future.sequence(ps.map(_.source.pk()))
+        for {
+          ops <- operations
+          pss <- paymentSigners
+          signers = (account.publicKey +: pss).map(_.accountId).distinct.flatMap(config.accounts.get)
+          _ =  logger.debug(s"[${account.publicKey.accountId}] transacting (ops=${ops.size}, seqNo=${account.sequenceNumber})")
+          txn = Transaction(account, ops)(config.network).sign(signers.head, signers.tail: _*)
+          resp <- txn.submit().map(_ -> ps -> account)
+        } yield resp
       }
       .mapAsync(parallelism = config.accounts.size)(_.map {
         case ((_: TransactionApproved, ps), account) =>

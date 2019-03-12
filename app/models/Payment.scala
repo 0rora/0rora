@@ -6,9 +6,11 @@ import stellar.sdk.PublicKeyOps
 import stellar.sdk.model.{Asset, IssuedAmount, NativeAmount}
 import stellar.sdk.model.op.PaymentOperation
 
+import scala.concurrent.{ExecutionContext, Future}
+
 case class Payment(id: Option[Long],
-                   source: PublicKeyOps,
-                   destination: PublicKeyOps,
+                   source: AccountIdLike,
+                   destination: AccountIdLike,
                    code: String,
                    issuer: Option[PublicKeyOps],
                    units: Long,
@@ -18,8 +20,11 @@ case class Payment(id: Option[Long],
                    status: Payment.Status,
                    opResult: Option[String] = None) {
 
-  def asOperation = PaymentOperation(
-    destination, issuer.map(i => IssuedAmount(units, Asset(code, i))).getOrElse(NativeAmount(units)), Some(source)
+  def asOperation()(implicit ec: ExecutionContext): Future[PaymentOperation] = for {
+    s <- source.pk()
+    d <- destination.pk()
+  } yield PaymentOperation(
+    d, issuer.map(i => IssuedAmount(units, Asset(code, i))).getOrElse(NativeAmount(units)), Some(s)
   )
 }
 

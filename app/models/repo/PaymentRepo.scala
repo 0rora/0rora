@@ -6,7 +6,7 @@ import akka.{Done, NotUsed}
 import akka.stream.scaladsl.{Flow, Keep, Sink}
 import javax.inject
 import javax.inject.Inject
-import models.Payment
+import models.{AccountIdLike, Payment}
 import models.Payment.{Failed, Pending, Submitted, Succeeded}
 import scalikejdbc.{AutoSession, _}
 import stellar.sdk.KeyPair
@@ -25,7 +25,7 @@ class PaymentRepo @Inject()()(implicit val session: DBSession) {
     .groupedWithin(100, 1.second)
     .map {
       _.map(p =>
-        Seq(p.source.accountId, p.destination.accountId, p.code, p.issuer.map(_.accountId).orNull, p.units, p.received, p.scheduled,
+        Seq(p.source.account, p.destination.account, p.code, p.issuer.map(_.accountId).orNull, p.units, p.received, p.scheduled,
           p.status.toString.toLowerCase)
       )
     }.toMat(Sink.foreach { params =>
@@ -208,8 +208,8 @@ class PaymentRepo @Inject()()(implicit val session: DBSession) {
   private def from(rs: WrappedResultSet): Payment =
     Payment(
       id = rs.longOpt("id"),
-      source = KeyPair.fromAccountId(rs.string("source")),
-      destination = KeyPair.fromAccountId(rs.string("destination")),
+      source = AccountIdLike(rs.string("source")),
+      destination = AccountIdLike(rs.string("destination")),
       code = rs.string("code"),
       issuer = rs.stringOpt("issuer").map(KeyPair.fromAccountId),
       units = rs.long("units"),

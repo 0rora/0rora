@@ -21,8 +21,8 @@ object Generators {
 
   def genScheduledPayment: Gen[Payment] = for {
     id <- Gen.posNum[Long]
-    source = KeyPair.random.asPublicKey
-    dest = KeyPair.random.asPublicKey
+    source = AccountIdLike(KeyPair.random.accountId)
+    dest = AccountIdLike(KeyPair.random.accountId)
     units <- Gen.posNum[Long]
     date01 <- genDate
     date02 <- genDate
@@ -48,7 +48,12 @@ object Generators {
     Gen.chooseNum(Long.MinValue, Long.MaxValue)
       .map(delta => ZonedDateTime.now(ZoneId.of("UTC")).plusNanos(delta).withNano(0))
 
-  def genAccount: Gen[Account] = Gen.posNum[Long].map(Account(KeyPair.random, _))
+  def genAccount: Gen[Account] = for {
+    seqNo <- Gen.posNum[Long]
+    kp <- genKeyPair
+  } yield Account(kp, seqNo)
+
+  def genKeyPair: Gen[KeyPair] = Gen.alphaNumChar.map(_ => KeyPair.random)
 
   def genURL: Gen[String] = for {
     schema <- Gen.oneOf("http", "https")

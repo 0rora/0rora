@@ -53,7 +53,7 @@ class PaymentRepoSpec extends Specification with BeforeAfterAll {
   class PaymentsState(ps: Seq[Payment]) extends AutoRollback {
     override def fixture(implicit session: DBSession): Unit = {
       val params = ps.map { p =>
-        Seq(p.source.accountId, p.destination.accountId, p.code, p.issuer.map(_.accountId).orNull, p.units,
+        Seq(p.source.account, p.destination.account, p.code, p.issuer.map(_.accountId).orNull, p.units,
           p.received, p.scheduled, p.submitted.orNull, p.status.name, p.opResult.orNull)
       }
       sql"""

@@ -380,7 +380,7 @@ class PaymentProcessorActorSpec extends TestKit(ActorSystem("payment-processor-s
       }
 
       val account = sampleOf(genAccount).copy(publicKey = kp)
-      val payments = sampleOf(Gen.listOfN(3, genPayment)).map(_.copy(source = kp))
+      val payments = sampleOf(Gen.listOfN(3, genPayment)).map(_.copy(source = AccountIdLike(kp.accountId)))
       val probe = new TestProbe(system)
       val sink = PaymentProcessor.paymentSink(probe.ref, conf)
 
@@ -403,7 +403,7 @@ class PaymentProcessorActorSpec extends TestKit(ActorSystem("payment-processor-s
       }
 
       val account = sampleOf(genAccount).copy(publicKey = kp)
-      val payments = sampleOf(Gen.listOfN(3, genPayment)).map(_.copy(source = kp))
+      val payments = sampleOf(Gen.listOfN(3, genPayment)).map(_.copy(source = AccountIdLike(kp.accountId)))
       val probe = new TestProbe(system)
       val sink = PaymentProcessor.paymentSink(probe.ref, conf)
 
@@ -426,7 +426,7 @@ class PaymentProcessorActorSpec extends TestKit(ActorSystem("payment-processor-s
       }
 
       val account = sampleOf(genAccount).copy(publicKey = kp)
-      val payments = sampleOf(Gen.listOfN(3, genPayment)).map(_.copy(source = kp))
+      val payments = sampleOf(Gen.listOfN(3, genPayment)).map(_.copy(source = AccountIdLike(kp.accountId)))
       val probe = new TestProbe(system)
       val sink = PaymentProcessor.paymentSink(probe.ref, conf)
 
@@ -449,7 +449,7 @@ class PaymentProcessorActorSpec extends TestKit(ActorSystem("payment-processor-s
       }
 
       val account = sampleOf(genAccount).copy(publicKey = kp)
-      val payments = sampleOf(Gen.listOfN(3, genPayment)).map(_.copy(source = kp))
+      val payments = sampleOf(Gen.listOfN(3, genPayment)).map(_.copy(source = AccountIdLike(kp.accountId)))
       val probe = new TestProbe(system)
       val sink = PaymentProcessor.paymentSink(probe.ref, conf)
 
@@ -473,7 +473,7 @@ class PaymentProcessorActorSpec extends TestKit(ActorSystem("payment-processor-s
       }
 
       val account = sampleOf(genAccount).copy(publicKey = kp)
-      val payments = sampleOf(Gen.listOfN(3, genPayment)).map(_.copy(source = kp))
+      val payments = sampleOf(Gen.listOfN(3, genPayment)).map(_.copy(source = AccountIdLike(kp.accountId)))
       val probe = new TestProbe(system)
       val sink = PaymentProcessor.paymentSink(probe.ref, conf)
 

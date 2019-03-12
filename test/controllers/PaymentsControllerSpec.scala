@@ -7,7 +7,7 @@ import akka.stream.ActorMaterializer
 import controllers.actions.AuthenticatedUserAction
 import models.Generators.genSuccessfulPayment
 import models.Global.SessionUsernameKey
-import models.Payment
+import models.{AccountIdLike, Payment}
 import models.repo.PaymentRepo
 import org.scalacheck.{Arbitrary, Gen}
 import org.specs2.ScalaCheck
@@ -34,14 +34,14 @@ class PaymentsControllerSpec(implicit ec: ExecutionEnv) extends PlaySpecificatio
     (JsPath \ "id").readNullable[Long] and
       (JsPath \ "scheduled").read[Long].map(epochMillisToUTCDateTime) and
       (JsPath \ "submitted").readNullable[Long].map(_.map(epochMillisToUTCDateTime)) and
-      (JsPath \ "from").read[String].map(KeyPair.fromAccountId) and
-      (JsPath \ "to").read[String].map(KeyPair.fromAccountId) and
+      (JsPath \ "from").read[String].map(AccountIdLike.apply) and
+      (JsPath \ "to").read[String].map(AccountIdLike.apply) and
       (JsPath \ "asset").read[String] and
       (JsPath \ "units").read[Double].map(BigDecimal.apply).map(_ * 10000000.0).map(_.doubleValue) and
       (JsPath \ "status").read[String].map(Payment.status) and
       (JsPath \ "result").readNullable[String]
-    ){  (id: Option[Long], scheduled: ZonedDateTime, submitted: Option[ZonedDateTime], from: PublicKeyOps,
-  to: PublicKeyOps, asset: String, units: Double, status: Payment.Status, result: Option[String]) =>
+    ){  (id: Option[Long], scheduled: ZonedDateTime, submitted: Option[ZonedDateTime], from: AccountIdLike,
+  to: AccountIdLike, asset: String, units: Double, status: Payment.Status, result: Option[String]) =>
       Payment(id, from, to, asset, None, units.toLong, scheduled, scheduled, submitted, status, result)
   }
 
