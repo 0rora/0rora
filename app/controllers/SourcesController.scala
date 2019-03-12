@@ -9,22 +9,21 @@ import akka.stream.scaladsl.{Keep, Sink, Source}
 import javax.inject.Inject
 import kantan.csv.ops._
 import kantan.csv.{rfc, _}
-import models.{Payment, PaymentProcessor}
 import models.repo.PaymentRepo
-import play.api.{Configuration, Logger}
+import models.{Payment, PaymentProcessor}
 import play.api.libs.Files
 import play.api.libs.json.Json
 import play.api.mvc._
+import play.api.{Configuration, Logger}
 import stellar.sdk.KeyPair
 
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.util.{Failure, Success, Try}
+import scala.util.Try
 
 class SourcesController @Inject()(cc: MessagesControllerComponents,
-                                  config: Configuration,
                                   paymentRepo: PaymentRepo,
-                                  paymentProcessor: PaymentProcessor,
-                                  implicit val system: ActorSystem) extends MessagesAbstractController(cc) {
+                                  paymentProcessor: PaymentProcessor)
+                                 (implicit val system: ActorSystem) extends MessagesAbstractController(cc) {
 
   private val logger = Logger("0rora.sources")
 
@@ -36,7 +35,6 @@ class SourcesController @Inject()(cc: MessagesControllerComponents,
      issuer: Option[String],
      units: Long,
      schedule: Option[String]) =>
-      // todo - debug the failure
       Try {
         Payment(
           None,
