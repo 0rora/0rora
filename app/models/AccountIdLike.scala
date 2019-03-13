@@ -20,7 +20,7 @@ case class FederatedAddress(account: String) extends AccountIdLike {
 
 object AccountIdLike {
 
-  private val fedAddressPattern = """^.+\*([a-z0-9]+(-[a-z0-9]+)*\.)+[a-z]{2,}$""".r.pattern
+  private val fedAddressPattern = """^.+\*([a-z0-9]+(-[a-z0-9]+)*\.)*[a-z]{2,}(:[0-9]+)?$""".r.pattern
 
   def apply(s: String): AccountIdLike = {
     if (fedAddressPattern.matcher(s).matches()) FederatedAddress(s)

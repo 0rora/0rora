@@ -10,7 +10,6 @@ import stellar.sdk.model.result._
 import scala.annotation.tailrec
 
 object Generators {
-
   @tailrec
   def sampleOf[T](gen: Gen[T], tries: Int = 100): T = gen.sample match {
     case Some(t) => t
@@ -57,11 +56,22 @@ object Generators {
 
   def genURL: Gen[String] = for {
     schema <- Gen.oneOf("http", "https")
-    host <- Gen.identifier
+    host <- genDomainName
     port <- Gen.choose(80, 1024)
     segmentCount <- Gen.choose(0, 10)
     segments <- Gen.listOfN(segmentCount, Gen.identifier)
   } yield s"$schema://$host:$port/${segments.mkString("/")}"
+
+  def genDomainName: Gen[String] = for {
+    tld <- Gen.choose(2, 10).flatMap(Gen.listOfN(_, Gen.alphaChar).map(_.mkString))
+    labels <- Gen.choose(1, 8).flatMap(Gen.listOfN(_, Gen.alphaNumStr.suchThat(_.nonEmpty).map(_.take(10))))
+    dn = s"${labels.mkString(".")}.$tld".toLowerCase()
+  } yield if (dn.length > 253) dn.takeRight(253) else dn
+
+  def genFederatedName: Gen[String] = for {
+    name <- Gen.alphaNumStr.suchThat(_.nonEmpty)
+    domain <- genDomainName
+  } yield s"$name*$domain"
 
   def genPaymentOpResultFailure: Gen[PaymentResult] = Gen.oneOf(
     PaymentMalformed,
