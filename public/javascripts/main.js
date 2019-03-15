@@ -94,8 +94,8 @@ function loadPayments(i, key, total=0, forwards=true) {
                 formatDate(ps[i], "scheduled");
                 ps[i].status_icon = (ps[i].status==="succeeded") ? "fa-check-square" : "fa-exclamation-triangle";
                 ps[i].status_icon_class = (ps[i].status==="succeeded") ? "has-text-success" : "has-text-warning";
-                ps[i].from_short = ps[i].from.substring(0, 4) + "…" + ps[i].from.substring(50);
-                ps[i].to_short = ps[i].to.substring(0, 4) + "…" + ps[i].to.substring(50);
+                ps[i].from_short = trimAccountId(ps[i].from);
+                ps[i].to_short = trimAccountId(ps[i].to);
                 if (ps[i].status === "failed" && ps[i].result != null) {
                     ps[i].status = camelToTitle(ps[i].result);
                 }
@@ -142,8 +142,8 @@ function loadPaymentSchedule(i, key, total=0, forwards=true) {
             for (let i = 0; i < ps.length; i++) {
                 formatDate(ps[i], "submitted");
                 formatDate(ps[i], "scheduled");
-                ps[i].from_short = ps[i].from.substring(0, 4) + "…" + ps[i].from.substring(50);
-                ps[i].to_short = ps[i].to.substring(0, 4) + "…" + ps[i].to.substring(50);
+                ps[i].from_short = trimAccountId(ps[i].from);
+                ps[i].to_short = trimAccountId(ps[i].to);
             }
             const rendered = Mustache.render(template, {
                 start: Math.min(i, total),
@@ -169,25 +169,16 @@ function loadPaymentSchedule(i, key, total=0, forwards=true) {
     });
 }
 
-function loadPaymentSchedule_old() {
-    const template = $('#payment-schedule-template').html();
-    $.ajax({
-        url: '/payments/schedule',
-        type: 'GET',
-        success: function(data) {
-            for (let i = 0; i < data.length; i++) {
-                formatDate(data[i], "submitted");
-                formatDate(data[i], "scheduled");
-                data[i].from_short = data[i].from.substring(0, 4) + "…" + data[i].from.substring(50);
-                data[i].to_short = data[i].to.substring(0, 4) + "…" + data[i].to.substring(50);
-            }
-            const rendered = Mustache.render(template, { payments: data });
-            $('#payments-schedule-list').html(rendered);
-        },
-        error: function(xhr) {
-            console.log("xhr: ", xhr);
+function trimAccountId(id) {
+    if (id.indexOf('*') > 0) {
+        if (id.length > 50) {
+            return id.substring(0, 50) + "…";
+        } else {
+            return id;
         }
-    });
+    } else {
+        return id.substring(0, 4) + "…" + id.substring(50);
+    }
 }
 
 let droppedFiles = false;

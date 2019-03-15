@@ -1,9 +1,9 @@
-# -- Ups
+# --- !Ups
 
 ALTER TABLE payments ALTER COLUMN units type BIGINT;
 
 
 
-# -- Downs
+# --- !Downs
 
 ALTER TABLE payments ALTER COLUMN units type NUMERIC;

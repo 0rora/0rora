@@ -2,14 +2,13 @@ package models.repo
 
 import java.time.{ZoneId, ZonedDateTime}
 
-import akka.{Done, NotUsed}
+import akka.Done
 import akka.stream.scaladsl.{Flow, Keep, Sink}
-import javax.inject
 import javax.inject.Inject
+import models.Payment._
 import models.{AccountIdLike, Payment}
-import models.Payment.{Failed, Pending, Submitted, Succeeded}
-import scalikejdbc.{AutoSession, _}
-import stellar.sdk.KeyPair
+import scalikejdbc._
+import stellar.sdk.{KeyPair, PublicKeyOps}
 
 import scala.concurrent.Future
 import scala.concurrent.duration._
@@ -19,7 +18,8 @@ class PaymentRepo @Inject()()(implicit val session: DBSession) {
 
   private val UTC = ZoneId.of("UTC")
 
-  private val selectPayment = sqls"select id, source, destination, code, issuer, units, received, scheduled, submitted, status, op_result"
+  private val selectPayment = sqls"select id, source, destination, code, issuer, units, received, scheduled, submitted, " +
+    sqls"status, op_result, source_resolved, destination_resolved"
 
   val writer: Sink[Payment, Future[Done]] = Flow[Payment]
     .groupedWithin(100, 1.second)
@@ -36,7 +36,7 @@ class PaymentRepo @Inject()()(implicit val session: DBSession) {
   })(Keep.right)
 
   def countHistoric: Int = {
-    sql"""select count(1) from payments where status in ('failed', 'succeeded')""".map(_.int(1)).single().apply().get
+    sql"""select count(1) from payments where status in ('failed', 'succeeded', 'invalid')""".map(_.int(1)).single().apply().get
   }
 
   def countScheduled: Int = {
@@ -53,7 +53,16 @@ class PaymentRepo @Inject()()(implicit val session: DBSession) {
     """.map(from).list().apply()
   }
 
-  private def updateStatus(ids: Seq[Long], status: Payment.Status): Unit = {
+  def valid(maxRecords: Int): Seq[Payment] = {
+    sql"""
+       $selectPayment
+       from payments
+       where status='valid'
+       limit $maxRecords
+    """.map(from).list().apply()
+  }
+
+  def updateStatus(ids: Seq[Long], status: Payment.Status): Unit = {
     sql"""
         update payments set status=${status.name} where id in ($ids)
     """.update().apply()
@@ -82,6 +91,19 @@ class PaymentRepo @Inject()()(implicit val session: DBSession) {
   def rejectWithOpResult(idsWithResults: Seq[(Long, String)]): Unit =
     updateStatusWithOpResult(idsWithResults, Failed)
 
+  def invalidate(ids: Seq[Long], date: ZonedDateTime): Unit = {
+    sql"""
+        update payments set status=${Invalid.name}, submitted=$date where id in ($ids)
+    """.update().apply()
+  }
+
+  def validate(idsAndPKs: Seq[(Long, PublicKeyOps, PublicKeyOps)]): Unit = {
+    val batchParams: Seq[Seq[Any]] = idsAndPKs.map { case (a, b, c) => Seq(b.accountId, c.accountId, a) }
+    sql"""
+      update payments set status='valid', source_resolved=?, destination_resolved=? where id=?
+    """.batch(batchParams: _*).apply()
+  }
+
   def retry(ids: Seq[Long]): Unit = updateStatus(ids, Pending)
 
   def earliestTimeDue: Option[ZonedDateTime] = {
@@ -101,7 +123,7 @@ class PaymentRepo @Inject()()(implicit val session: DBSession) {
     sql"""
       $selectPayment
       FROM payments
-      WHERE status IN ('succeeded','failed')
+      WHERE status IN ('succeeded', 'failed', 'invalid')
       ORDER BY submitted DESC, id DESC
       LIMIT $limit;
     """.map(from).list().apply()
@@ -118,7 +140,7 @@ class PaymentRepo @Inject()()(implicit val session: DBSession) {
     sql"""
       $selectPayment
       FROM payments
-      WHERE status IN ('succeeded','failed')
+      WHERE status IN ('succeeded','failed', 'invalid')
       AND (
         submitted < (SELECT submitted FROM payments WHERE id=$id)
         OR
@@ -140,7 +162,7 @@ class PaymentRepo @Inject()()(implicit val session: DBSession) {
     sql"""
       $selectPayment
       FROM payments
-      WHERE status IN ('succeeded','failed')
+      WHERE status IN ('succeeded','failed', 'invalid')
       AND (
         submitted > (SELECT submitted FROM payments WHERE id=$id)
         OR (submitted = (SELECT submitted FROM payments WHERE id=$id) AND id > $id)
@@ -217,6 +239,8 @@ class PaymentRepo @Inject()()(implicit val session: DBSession) {
       scheduled = ZonedDateTime.ofInstant(rs.timestamp("scheduled").toInstant, UTC),
       submitted = rs.timestampOpt("submitted").map(_.toInstant).map(ZonedDateTime.ofInstant(_, UTC)),
       status = Payment.status(rs.string("status")),
-      opResult = rs.stringOpt("op_result")
+      opResult = rs.stringOpt("op_result"),
+      sourceResolved = rs.stringOpt("source_resolved").map(KeyPair.fromAccountId),
+      destinationResolved = rs.stringOpt("destination_resolved").map(KeyPair.fromAccountId)
     )
 }

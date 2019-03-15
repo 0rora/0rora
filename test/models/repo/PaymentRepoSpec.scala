@@ -5,7 +5,7 @@ import java.time.{ZoneId, ZonedDateTime}
 import akka.Done
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
-import akka.stream.scaladsl.{Keep, Source}
+import akka.stream.scaladsl.Source
 import models.Generators._
 import models.Payment
 import org.scalacheck.Gen
@@ -17,9 +17,8 @@ import scalikejdbc.ConnectionPool.DEFAULT_NAME
 import scalikejdbc._
 import scalikejdbc.specs2.mutable.AutoRollback
 
-import scala.annotation.tailrec
-import scala.concurrent.{Await, Future}
 import scala.concurrent.duration.Duration
+import scala.concurrent.{Await, Future}
 
 class PaymentRepoSpec extends Specification with BeforeAfterAll {
 
@@ -32,12 +31,15 @@ class PaymentRepoSpec extends Specification with BeforeAfterAll {
 
   def beforeAll(): Unit = {
     val db = Databases.inMemory(
-      name = "default",
+      name = "test",
       urlOptions = Map("MODE" -> "PostgreSQL", "DATABASE_TO_UPPER" -> "FALSE"),
       config = Map()
     )
     val evolutions = new DatabaseEvolutions(db, "")
     val scripts = evolutions.scripts(ThisClassLoaderEvolutionsReader)
+
+    ThisClassLoaderEvolutionsReader.evolutions(db.name)
+
     evolutions.evolve(scripts, autocommit = true)
     ConnectionPool.add(DEFAULT_NAME, new DataSourceConnectionPool(db.dataSource))
     database = Some(db)
@@ -54,11 +56,13 @@ class PaymentRepoSpec extends Specification with BeforeAfterAll {
     override def fixture(implicit session: DBSession): Unit = {
       val params = ps.map { p =>
         Seq(p.source.account, p.destination.account, p.code, p.issuer.map(_.accountId).orNull, p.units,
-          p.received, p.scheduled, p.submitted.orNull, p.status.name, p.opResult.orNull)
+          p.received, p.scheduled, p.submitted.orNull, p.status.name, p.opResult.orNull,
+          p.sourceResolved.map(_.accountId).orNull, p.destinationResolved.map(_.accountId).orNull)
       }
       sql"""
-          insert into payments (source, destination, code, issuer, units, received, scheduled, submitted, status, op_result)
-          values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          insert into payments (source, destination, code, issuer, units, received, scheduled, submitted, status,
+                                op_result, source_resolved, destination_resolved)
+          values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """.batch(params: _*).apply()
     }
 
@@ -68,7 +72,10 @@ class PaymentRepoSpec extends Specification with BeforeAfterAll {
   "count of history payments" should {
     val ps = sample(1000, genPayment)
     "equal the qty of payments with status succeeded or failed" in new PaymentsState(ps) {
-      repo.countHistoric mustEqual ps.count(_.status == Payment.Succeeded) + ps.count(_.status == Payment.Failed)
+      repo.countHistoric mustEqual
+        ps.count(_.status == Payment.Succeeded) +
+          ps.count(_.status == Payment.Failed) +
+          ps.count(_.status == Payment.Invalid)
     }
   }
 

@@ -39,10 +39,13 @@ class PaymentsControllerSpec(implicit ec: ExecutionEnv) extends PlaySpecificatio
       (JsPath \ "asset").read[String] and
       (JsPath \ "units").read[Double].map(BigDecimal.apply).map(_ * 10000000.0).map(_.doubleValue) and
       (JsPath \ "status").read[String].map(Payment.status) and
-      (JsPath \ "result").readNullable[String]
+      (JsPath \ "result").readNullable[String] and
+      (JsPath \ "from_res").readNullable[String].map(_.map(KeyPair.fromAccountId)) and
+      (JsPath \ "to_res").readNullable[String].map(_.map(KeyPair.fromAccountId))
     ){  (id: Option[Long], scheduled: ZonedDateTime, submitted: Option[ZonedDateTime], from: AccountIdLike,
-  to: AccountIdLike, asset: String, units: Double, status: Payment.Status, result: Option[String]) =>
-      Payment(id, from, to, asset, None, units.toLong, scheduled, scheduled, submitted, status, result)
+  to: AccountIdLike, asset: String, units: Double, status: Payment.Status, result: Option[String],
+         fromResolved: Option[PublicKeyOps], toResolved: Option[PublicKeyOps]) =>
+      Payment(id, from, to, asset, None, units.toLong, scheduled, scheduled, submitted, status, result, fromResolved, toResolved)
   }
 
   implicit val paymentSubListReads: Reads[PaymentSubList] = (
