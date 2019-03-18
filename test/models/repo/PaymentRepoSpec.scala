@@ -160,16 +160,6 @@ class PaymentRepoSpec extends Specification with BeforeAfterAll {
     }
   }
 
-  "retrying payments" should {
-    val ps = sample(100, genSubmittedPayment)
-    "move the status to 'pending'" in new PaymentsState(ps) {
-      val ids = fetchIds
-      repo.retry(ids.take(50))
-      val pendingIds = sql"""select id from payments where status='pending'""".map(_.int(1)).list().apply()
-      pendingIds mustEqual ids.take(50)
-    }
-  }
-
   "rejecting payments with an op result" should {
     val ps = sample(100, genSubmittedPayment)
     "move the status to 'failed' and update the op_result" in new PaymentsState(ps) {

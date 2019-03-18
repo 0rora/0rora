@@ -101,15 +101,6 @@ class PaymentRepo @Inject()()(implicit val session: DBSession) {
     """.update().apply()
   }
 
-  def validate(idsAndPKs: Seq[(Long, PublicKeyOps, PublicKeyOps)]): Unit = {
-    val batchParams: Seq[Seq[Any]] = idsAndPKs.map { case (a, b, c) => Seq(b.accountId, c.accountId, a) }
-    sql"""
-      update payments set status='valid', source_resolved=?, destination_resolved=? where id=?
-    """.batch(batchParams: _*).apply()
-  }
-
-  def retry(ids: Seq[Long]): Unit = updateStatus(ids, Pending)
-
   def earliestTimeDue: Option[ZonedDateTime] = {
     sql"""select min(scheduled) as next from payments where status='pending'""".map { rs =>
       Option(rs.timestamp("next"))
