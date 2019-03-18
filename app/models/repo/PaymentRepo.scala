@@ -8,11 +8,10 @@ import javax.inject.Inject
 import models.Payment._
 import models.{AccountIdLike, Payment}
 import scalikejdbc._
-import scalikejdbc.config.DBs
 import stellar.sdk.{KeyPair, PublicKeyOps}
 
-import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration._
+import scala.concurrent.{ExecutionContext, Future}
 
 @javax.inject.Singleton
 class PaymentRepo @Inject()()(implicit val session: DBSession) {
@@ -56,38 +55,7 @@ class PaymentRepo @Inject()()(implicit val session: DBSession) {
         returning $paymentFields
       """.map(from).iterable().apply().toIterator
     }
-
-
-/* // todo - this is what I'd like to do - https://stackoverflow.com/questions/55213167/update-returning-queries-in-scalikejdbc
-
-
-
-
-
-    db.autoCommit { implicit session =>
-      sql"""
-      update payments
-      set status='submitted'
-      where status='pending'
-      and scheduled <= ${ZonedDateTime.now.toInstant}
-      returning $paymentFields
-    """.map(from).iterable().apply().toIterator
-    }
-*/
-
   }
-
-/*
-  def due(maxRecords: Int): Seq[Payment] = {
-    sql"""
-       $selectPayment
-       from payments
-       where status='pending'
-       and scheduled <= ${ZonedDateTime.now.toInstant}
-       limit $maxRecords
-    """.map(from).list().apply()
-  }
-*/
 
   def valid(maxRecords: Int): Seq[Payment] = {
     sql"""
@@ -127,9 +95,9 @@ class PaymentRepo @Inject()()(implicit val session: DBSession) {
   def rejectWithOpResult(idsWithResults: Seq[(Long, String)]): Unit =
     updateStatusWithOpResult(idsWithResults, Failed)
 
-  def invalidate(ids: Seq[Long], date: ZonedDateTime): Unit = {
+  def invalidate(id: Long, date: ZonedDateTime): Unit = {
     sql"""
-        update payments set status=${Invalid.name}, submitted=$date where id in ($ids)
+        update payments set status=${Invalid.name}, submitted=$date where id=$id
     """.update().apply()
   }
 

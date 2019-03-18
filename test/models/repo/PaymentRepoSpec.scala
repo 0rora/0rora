@@ -146,6 +146,20 @@ class PaymentRepoSpec extends Specification with BeforeAfterAll {
     }
   }
 
+  "invalidating a payment" should {
+    val ps = sample(3, genScheduledPayment)
+    "move the status to 'failed'" in new PaymentsState(ps) {
+      val ids = fetchIds
+      val now = ZonedDateTime.now
+      repo.invalidate(ids.head, now)
+      val idsAndDates = sql"select id, submitted from payments where status='invalid'".map { rs =>
+        rs.long("id") -> rs.timestampOpt("submitted").map(_.toInstant).map(ZonedDateTime.ofInstant(_, now.getZone))
+      }.list().apply()
+
+      idsAndDates mustEqual List(ids.head -> Some(now))
+    }
+  }
+
   "retrying payments" should {
     val ps = sample(100, genSubmittedPayment)
     "move the status to 'pending'" in new PaymentsState(ps) {
