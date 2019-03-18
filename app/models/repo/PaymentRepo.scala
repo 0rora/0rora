@@ -18,8 +18,9 @@ class PaymentRepo @Inject()()(implicit val session: DBSession) {
 
   private val UTC = ZoneId.of("UTC")
 
-  private val selectPayment = sqls"select id, source, destination, code, issuer, units, received, scheduled, submitted, " +
+  private val paymentFields = sqls"id, source, destination, code, issuer, units, received, scheduled, submitted, " +
     sqls"status, op_result, source_resolved, destination_resolved"
+  private val selectPayment = sqls"select $paymentFields"
 
   val writer: Sink[Payment, Future[Done]] = Flow[Payment]
     .groupedWithin(100, 1.second)
@@ -43,6 +44,26 @@ class PaymentRepo @Inject()()(implicit val session: DBSession) {
     sql"""select count(1) from payments where status=${Pending.name}""".map(_.int(1)).single().apply().get
   }
 
+  def due: Iterator[Payment] = {
+/* // todo - this is what I'd like to do - https://stackoverflow.com/questions/55213167/update-returning-queries-in-scalikejdbc
+      sql"""
+      update payments
+      set status='submitted'
+      where status='pending'
+      and scheduled <= ${ZonedDateTime.now.toInstant}
+      returning $paymentFields
+    """.map(from).iterable().apply().toIterator
+*/
+
+    sql"""
+       $selectPayment
+       from payments
+       where status='pending'
+       and scheduled <= ${ZonedDateTime.now.toInstant}
+    """.map(from).iterable().apply().toIterator
+  }
+
+/*
   def due(maxRecords: Int): Seq[Payment] = {
     sql"""
        $selectPayment
@@ -52,6 +73,7 @@ class PaymentRepo @Inject()()(implicit val session: DBSession) {
        limit $maxRecords
     """.map(from).list().apply()
   }
+*/
 
   def valid(maxRecords: Int): Seq[Payment] = {
     sql"""

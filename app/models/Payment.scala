@@ -4,6 +4,7 @@ import java.time.ZonedDateTime
 
 import stellar.sdk.PublicKeyOps
 import stellar.sdk.model.op.PaymentOperation
+import stellar.sdk.model.result.OperationResult
 import stellar.sdk.model.{Asset, IssuedAmount, NativeAmount}
 
 case class Payment(id: Option[Long],

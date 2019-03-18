@@ -86,6 +86,7 @@ class PaymentRepoSpec extends Specification with BeforeAfterAll {
     }
   }
 
+/*
   "list of due payments" should {
     "return nothing if there is nothing" in new PaymentsState(Nil) {
       repo.due(100) must beEmpty
@@ -103,6 +104,7 @@ class PaymentRepoSpec extends Specification with BeforeAfterAll {
       )
     }
   }
+*/
 
   "submitting payments" should {
     val now = ZonedDateTime.now(UTC)
