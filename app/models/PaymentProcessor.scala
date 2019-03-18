@@ -3,11 +3,12 @@ package models
 import actors.PaymentRepository.Poll
 import actors.{AccountRepository, PaymentController, PaymentRepository}
 import akka.actor.{ActorSystem, Props}
+import com.google.inject.Provider
 import javax.inject.{Inject, Singleton}
 import models.repo.PaymentRepo
 import play.api.inject.{Binding, Module}
 import play.api.{Configuration, Environment}
-import scalikejdbc.{AutoSession, DBSession}
+import scalikejdbc.{AutoSession, DB, DBSession, NamedDB}
 
 import scala.concurrent.ExecutionContextExecutor
 import scala.concurrent.duration._

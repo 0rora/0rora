@@ -34,12 +34,8 @@ class PaymentRepository(repo: PaymentRepo) extends Actor {
     case Poll =>
       logger.debug("Polling")
       // todo - convert to "update returning" statement - https://stackoverflow.com/questions/55213167/update-returning-queries-in-scalikejdbc
-      repo.due
-        .map { p =>
-          state.subs.foreach(_ ! p)
-          p
-        }
-        .grouped(100).foreach(ps => repo.submit(ps.flatMap(_.id), ZonedDateTime.now))
+      repo.due().foreach(p => state.subs.foreach(_ ! p))
+//        .grouped(100).foreach(ps => repo.submit(ps.flatMap(_.id), ZonedDateTime.now))
   }
 
   val schedulePoll: PartialFunction[Any, Unit] = {
@@ -58,7 +54,6 @@ class PaymentRepository(repo: PaymentRepo) extends Actor {
     case Invalid(payment) =>
       val now = ZonedDateTime.now
       payment.id.foreach { id =>
-        logger.debug(s"[payment $id] Marking as Invalid")
         repo.invalidate(Seq(id), now) // todo - update single
       }
   }

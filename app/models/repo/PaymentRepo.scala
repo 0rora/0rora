@@ -8,9 +8,10 @@ import javax.inject.Inject
 import models.Payment._
 import models.{AccountIdLike, Payment}
 import scalikejdbc._
+import scalikejdbc.config.DBs
 import stellar.sdk.{KeyPair, PublicKeyOps}
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration._
 
 @javax.inject.Singleton
@@ -44,8 +45,26 @@ class PaymentRepo @Inject()()(implicit val session: DBSession) {
     sql"""select count(1) from payments where status=${Pending.name}""".map(_.int(1)).single().apply().get
   }
 
-  def due: Iterator[Payment] = {
+  def due()(implicit ec: ExecutionContext): Iterator[Payment] = {
+    val now = ZonedDateTime.now.toInstant
+    DB.localTx { implicit session =>
+      sql"""
+        update payments
+        set status='submitted', submitted=$now
+        where status='pending'
+        and scheduled <= $now
+        returning $paymentFields
+      """.map(from).iterable().apply().toIterator
+    }
+
+
 /* // todo - this is what I'd like to do - https://stackoverflow.com/questions/55213167/update-returning-queries-in-scalikejdbc
+
+
+
+
+
+    db.autoCommit { implicit session =>
       sql"""
       update payments
       set status='submitted'
@@ -53,14 +72,9 @@ class PaymentRepo @Inject()()(implicit val session: DBSession) {
       and scheduled <= ${ZonedDateTime.now.toInstant}
       returning $paymentFields
     """.map(from).iterable().apply().toIterator
+    }
 */
 
-    sql"""
-       $selectPayment
-       from payments
-       where status='pending'
-       and scheduled <= ${ZonedDateTime.now.toInstant}
-    """.map(from).iterable().apply().toIterator
   }
 
 /*
