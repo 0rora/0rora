@@ -15,9 +15,7 @@ class AccountRepository(config: AppConfig) extends Actor {
 
   override def receive: Receive = newState(State())
 
-  private def newState(state: State): Receive = subscribe(state) orElse refreshAccount(state) orElse {
-    case x => logger.warn(s"Unrecognised: $x")
-  }
+  private def newState(state: State): Receive = subscribe(state) orElse refreshAccount(state)
 
   def subscribe(state: State): PartialFunction[Any, Unit] = {
     case Subscribe(sub) =>

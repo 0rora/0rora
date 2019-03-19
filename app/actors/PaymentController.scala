@@ -33,9 +33,7 @@ class PaymentController(payRepo: ActorRef, accountRepo: ActorRef, config: AppCon
 
   private def newState(s: State): Receive = {
     pendingPayment(s) orElse validPayment(s) orElse invalidPayment(s) orElse
-      payBatch(s) orElse flush(s) orElse updateAccount(s) orElse {
-      case x => logger.warn(s"Unrecognised: $x")
-    }
+      payBatch(s) orElse flush(s) orElse updateAccount(s)
   }
 
   // A new payment has arrived. Validate it.
