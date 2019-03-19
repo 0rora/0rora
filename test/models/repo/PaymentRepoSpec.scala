@@ -108,6 +108,11 @@ class PaymentRepoSpec(ee: ExecutionEnv) extends Specification
         psScheduled.filter(_.scheduled.isBefore(ZonedDateTime.now())).map(_.copy(id = None, status = Payment.Submitted))
       )
     }
+
+    "work with autosession (inside play)" in {
+      implicit val session: DBSession = AutoSession
+      repo.due must beEmpty
+    }
   }
 
   "submitting payments" should {

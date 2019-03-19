@@ -27,4 +27,14 @@ libraryDependencies ++= Seq(
   "com.whisk" %% "docker-testkit-impl-docker-java" % "0.9.8" % Test,
 )
 
+scalacOptions ++= Seq(
+  "-Yrangepos",
+  "-unchecked",
+  "-deprecation",
+  "-feature",
+  "-language:postfixOps",
+  "-encoding",
+  "UTF-8",
+  "-target:jvm-1.8")
+
 coverageExcludedPackages := "controllers\\.javascript;router;views.html;controllers\\.Reverse.*"
