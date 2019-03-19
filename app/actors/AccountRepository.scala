@@ -5,7 +5,7 @@ import actors.PaymentController.{Subscribe, UpdateAccount}
 import akka.actor.{Actor, ActorRef}
 import models.AppConfig
 import play.api.Logger
-import stellar.sdk.PublicKeyOps
+import stellar.sdk.{PublicKey, PublicKeyOps}
 
 import scala.util.{Failure, Success}
 
@@ -26,7 +26,7 @@ class AccountRepository(config: AppConfig) extends Actor {
   }
 
   def refreshAccount(s: State): PartialFunction[Any, Unit] = {
-    case pk: PublicKeyOps =>
+    case pk: PublicKey =>
       logger.debug(s"[account ${pk.accountId}] Refreshing from network")
       config.network.account(pk).onComplete {
         case Success(resp) =>
