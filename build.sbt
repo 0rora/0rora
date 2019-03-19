@@ -22,9 +22,9 @@ libraryDependencies ++= Seq(
   "org.scalikejdbc" %% "scalikejdbc-test" % "3.3.0" % Test,
   "org.specs2" %% "specs2-scalacheck" % "4.3.6" % Test,
   "com.typesafe.akka" %% "akka-testkit" % "2.5.21" % Test,
-  "org.scalatestplus.play" %% "scalatestplus-play" % "4.0.0" % Test
+  "org.scalatestplus.play" %% "scalatestplus-play" % "4.0.0" % Test,
+  "com.whisk" %% "docker-testkit-specs2" % "0.9.8" % Test,
+  "com.whisk" %% "docker-testkit-impl-docker-java" % "0.9.8" % Test,
 )
-
-javaOptions in Test += "-Dconfig.file=conf/in-memory-db.conf"
 
 coverageExcludedPackages := "controllers\\.javascript;router;views.html;controllers\\.Reverse.*"

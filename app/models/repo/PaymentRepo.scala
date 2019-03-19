@@ -8,10 +8,10 @@ import javax.inject.Inject
 import models.Payment._
 import models.{AccountIdLike, Payment}
 import scalikejdbc._
-import stellar.sdk.{KeyPair, PublicKeyOps}
+import stellar.sdk.KeyPair
 
+import scala.concurrent.Future
 import scala.concurrent.duration._
-import scala.concurrent.{ExecutionContext, Future}
 
 @javax.inject.Singleton
 class PaymentRepo @Inject()()(implicit val session: DBSession) {
@@ -44,9 +44,9 @@ class PaymentRepo @Inject()()(implicit val session: DBSession) {
     sql"""select count(1) from payments where status=${Pending.name}""".map(_.int(1)).single().apply().get
   }
 
-  def due()(implicit ec: ExecutionContext): Iterator[Payment] = {
+  def due: Iterator[Payment] = {
     val now = ZonedDateTime.now.toInstant
-    DB.localTx { implicit session =>
+    def statement(implicit session: DBSession): Iterator[Payment] = {
       sql"""
         update payments
         set status='submitted', submitted=$now
@@ -55,15 +55,10 @@ class PaymentRepo @Inject()()(implicit val session: DBSession) {
         returning $paymentFields
       """.map(from).iterable().apply().toIterator
     }
-  }
-
-  def valid(maxRecords: Int): Seq[Payment] = {
-    sql"""
-       $selectPayment
-       from payments
-       where status='valid'
-       limit $maxRecords
-    """.map(from).list().apply()
+    session match {
+      case AutoSession => DB.localTx(statement(_))
+      case _           => statement(session)
+    }
   }
 
   def updateStatus(ids: Seq[Long], status: Payment.Status): Unit = {

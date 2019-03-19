@@ -6,13 +6,15 @@ import akka.Done
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.Source
+import com.whisk.docker.impl.dockerjava.DockerKitDockerJava
+import com.whisk.docker.specs2.DockerTestKit
 import models.Generators._
 import models.Payment
 import org.scalacheck.Gen
+import org.specs2.concurrent.ExecutionEnv
 import org.specs2.mutable.Specification
-import org.specs2.specification.BeforeAfterAll
-import play.api.db.evolutions.{DatabaseEvolutions, Evolutions, ThisClassLoaderEvolutionsReader}
-import play.api.db.{Database, Databases}
+import play.api.db.Databases
+import play.api.db.evolutions.{DatabaseEvolutions, ThisClassLoaderEvolutionsReader}
 import scalikejdbc.ConnectionPool.DEFAULT_NAME
 import scalikejdbc._
 import scalikejdbc.specs2.mutable.AutoRollback
@@ -20,39 +22,43 @@ import scalikejdbc.specs2.mutable.AutoRollback
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, Future}
 
-class PaymentRepoSpec extends Specification with BeforeAfterAll {
+class PaymentRepoSpec(ee: ExecutionEnv) extends Specification
+  with DockerTestKit with DockerKitDockerJava with DockerPostgresService {
 
   sequential
 
   private val UTC = ZoneId.of("UTC")
-  private var database: Option[Database] = None
   implicit val sys: ActorSystem = ActorSystem("PaymentRepoSpec")
   implicit val mat: ActorMaterializer = ActorMaterializer()
 
-  def beforeAll(): Unit = {
-    val db = Databases.inMemory(
-      name = "test",
-      urlOptions = Map("MODE" -> "PostgreSQL", "DATABASE_TO_UPPER" -> "FALSE"),
-      config = Map()
+  override def beforeAll(): Unit = {
+    try {
+      startAllOrFail()
+    } catch {
+      case t: Throwable => t.printStackTrace()
+    }
+
+    val db = Databases(
+      driver = "org.postgresql.Driver",
+      url = s"jdbc:postgresql://127.0.0.1:$PostgresExposedPort/",
+      name = "default",
+      config = Map(
+        "username" -> PostgresUser,
+        "password" -> PostgresPassword,
+        "logStatements" -> true
+      )
     )
     val evolutions = new DatabaseEvolutions(db, "")
     val scripts = evolutions.scripts(ThisClassLoaderEvolutionsReader)
 
-    ThisClassLoaderEvolutionsReader.evolutions(db.name)
-
     evolutions.evolve(scripts, autocommit = true)
     ConnectionPool.add(DEFAULT_NAME, new DataSourceConnectionPool(db.dataSource))
-    database = Some(db)
-  }
-
-  def afterAll(): Unit = {
-    database.foreach(Evolutions.cleanupEvolutions(_))
-    database.foreach(_.shutdown())
   }
 
   private def repo()(implicit session: DBSession) = new PaymentRepo()
 
   class PaymentsState(ps: Seq[Payment]) extends AutoRollback {
+
     override def fixture(implicit session: DBSession): Unit = {
       val params = ps.map { p =>
         Seq(p.source.account, p.destination.account, p.code, p.issuer.map(_.accountId).orNull, p.units,
@@ -86,25 +92,23 @@ class PaymentRepoSpec extends Specification with BeforeAfterAll {
     }
   }
 
-/*
   "list of due payments" should {
     "return nothing if there is nothing" in new PaymentsState(Nil) {
-      repo.due(100) must beEmpty
+      repo.due must beEmpty
     }
 
     val psHistoric = sample(100, genHistoricPayment)
     "return nothing if there is nothing due" in new PaymentsState(psHistoric) {
-      repo.due(150) must beEmpty
+      repo.due must beEmpty
     }
 
     val psScheduled = sample(80, genScheduledPayment)
     "return only those payments which are pending" in new PaymentsState(psHistoric ++ psScheduled) {
-      repo.due(100).map(_.copy(id = None)) must containTheSameElementsAs(
-        psScheduled.filter(_.scheduled.isBefore(ZonedDateTime.now())).map(_.copy(id = None))
+      repo.due.toList.map(_.copy(id = None, submitted = None)) must containTheSameElementsAs(
+        psScheduled.filter(_.scheduled.isBefore(ZonedDateTime.now())).map(_.copy(id = None, status = Payment.Submitted))
       )
     }
   }
-*/
 
   "submitting payments" should {
     val now = ZonedDateTime.now(UTC)

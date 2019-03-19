@@ -33,7 +33,7 @@ class PaymentRepository(repo: PaymentRepo) extends Actor {
   def poll(state: State): PartialFunction[Any, Unit] = {
     case Poll =>
       logger.debug("Polling")
-      repo.due().foreach(p => state.subs.foreach(_ ! p))
+      repo.due.foreach(p => state.subs.foreach(_ ! p))
   }
 
   val schedulePoll: PartialFunction[Any, Unit] = {
