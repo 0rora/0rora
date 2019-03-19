@@ -33,9 +33,7 @@ object Payment {
 
   def status(s: String): Status = s match {
     case "pending" => Pending
-    case "validating" => Validating
     case "invalid" => Invalid
-    case "valid" => Valid
     case "submitted" => Submitted
     case "failed" => Failed
     case "succeeded" => Succeeded
@@ -45,19 +43,9 @@ object Payment {
   /**
     * State transition for payments:
     *
-    * +-----------+
-    * |  pending  |
-    * +-----+-----+
-    *       |
-    *       |
-    * +-----v------+   +-----------+
-    * | validating +--->  invalid  |
-    * +-----+------+   +-----------+
-    *       |
-    *       |
-    * +-----v-----+
-    * |  valid    |
-    * +-----+-----+
+    * +-----------+   +-----------+
+    * |  pending  +--->  invalid  |
+    * +-----+-----+   +-----------+
     *       |
     *       |
     * +-----v-----+   +-----------+
