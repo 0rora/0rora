@@ -3,7 +3,9 @@ package models
 import org.specs2.mutable.Specification
 import play.api.inject.{Binding, BindingKey, BindingTarget, ProviderTarget}
 import play.api.{Configuration, Environment}
-import scalikejdbc.{AutoSession, DBSession, SettingsProvider}
+import scalikejdbc.{AutoSession, DBSession}
+
+import scala.language.existentials
 
 class PaymentProcessorModuleSpec extends Specification {
 

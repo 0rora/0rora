@@ -20,7 +20,7 @@ class PaymentRepository(repo: PaymentRepo) extends Actor {
   override def receive: Receive = newState()
 
   private def newState(state: State = State()): Receive =
-    subscribe(state) orElse poll(state) orElse schedulePoll orElse invalid orElse submitted orElse updateStatus
+    subscribe(state) orElse poll(state) orElse schedulePoll orElse invalid orElse updateStatus
 
   def subscribe(state: State): PartialFunction[Any, Unit] = {
     case Subscribe(sub) =>
@@ -52,13 +52,6 @@ class PaymentRepository(repo: PaymentRepo) extends Actor {
       payment.id.foreach(repo.invalidate(_, now))
   }
 
-  val submitted: PartialFunction[Any, Unit] = {
-    case Submitted(ps) =>
-      val now = ZonedDateTime.now
-      logger.debug(s"Updating ${ps.size} payments as Submitted at $now: ${ps.flatMap(_.id).mkString("[",",","]")}")
-      repo.submit(ps.flatMap(_.id), now)
-  }
-
   val updateStatus: PartialFunction[Any, Unit] = {
     case UpdateStatus(ps, status, cause) =>
       logger.debug(s"Updating ${ps.size} payments as $status${cause.map(c => s"($c)").getOrElse("")}")
@@ -76,19 +69,11 @@ object PaymentRepository {
 
   case class UpdateStatus(ps: Seq[Payment], status: Status, cause: Option[String] = None)
 
-  case class Submitted(ps: Seq[Payment])
-
   case class State(subs: Set[ActorRef] = Set.empty,
                    maxReceivedDate: Option[ZonedDateTime] = None) {
 
     def addSubscriber(sub: ActorRef): State = copy(subs + sub)
 
-//    def notifySubscribers(p: Payment): State = subs.foreach(_ ! p)
-//      maxReceivedDate match {
-//        case Some(d) if d.isAfter(p.received) => this
-//        case _ => copy(maxReceivedDate = Some(p.received))
-//      }
-//    }
   }
 
 }
