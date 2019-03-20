@@ -39,11 +39,11 @@ class PaymentController(payRepo: ActorRef, accountRepo: ActorRef, config: AppCon
   // A new payment has arrived. Validate it.
   def pendingPayment(s: State): PartialFunction[Any, Unit] = {
     case p: Payment =>
-      logger.debug(s"[payment ${p.id.get}] is pending")
+      logger.trace(s"[payment ${p.id.get}] is pending")
       context.become(newState(s.incValidating))
       validate(p) onComplete {
         case Success(valid) =>
-          logger.debug(s"[payment ${p.id.get}] is valid")
+          logger.trace(s"[payment ${p.id.get}] is valid")
           self ! Valid(valid)
         case Failure(t) =>
           logger.debug(s"[payment ${p.id.get}] is invalid: ${t.getMessage}")

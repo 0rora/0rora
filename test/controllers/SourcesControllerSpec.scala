@@ -71,7 +71,6 @@ class SourcesControllerSpec(implicit ec: ExecutionEnv) extends PlaySpecification
     val repo = mock[PaymentRepo]
     val flows = mutable.Buffer.empty[Payment]
     val writer: Sink[Payment, Future[Done]] = Flow[Payment].toMat(Sink.foreach { p: Payment =>
-      println(p.source)
       flows += p
     })(Keep.right)
     repo.writer returns writer
