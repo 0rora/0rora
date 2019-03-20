@@ -212,13 +212,6 @@ object PaymentController {
       else group(ps.drop(100), accns.tail, fullBatchesOnly, PaymentBatch(ps.take(100), accns.head) +: batches)
     }
 
-    def borrowAccount: (State, Option[Account]) = {
-      accounts.toSeq match {
-        case (_, h) +: t => this.copy(accounts = t.toMap) -> Some(h)
-        case _ => this -> None
-      }
-    }
-
     def returnAccount(accn: Account): State = copy(accounts = accounts.updated(accn.publicKey.accountId, accn))
 
     def withIncBatchId: State = copy(batchId = batchId + 1)
