@@ -46,7 +46,7 @@ class PaymentController(payRepo: ActorRef, accountRepo: ActorRef, config: AppCon
           logger.debug(s"[payment ${p.id.get}] is valid")
           self ! Valid(valid)
         case Failure(t) =>
-          logger.debug(s"[payment ${p.id.get}] is invalid")
+          logger.debug(s"[payment ${p.id.get}] is invalid: ${t.getMessage}")
           payRepo ! Invalid(p)
           self ! Invalid(p)
       }

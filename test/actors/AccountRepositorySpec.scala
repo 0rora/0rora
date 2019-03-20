@@ -4,13 +4,12 @@ import actors.PaymentController.{Subscribe, UpdateAccount}
 import akka.actor.{ActorSystem, Props}
 import akka.testkit.{ImplicitSender, TestKit, TestProbe}
 import models.Generators.{genAccount, sampleOf}
-import models.{AppConfig, Generators, StubNetwork}
-import org.mockito.Mockito
+import models.{AppConfig, StubNetwork}
 import org.mockito.Mockito.when
-import org.scalatest.{BeforeAndAfterAll, Matchers, WordSpecLike}
 import org.scalatest.concurrent.Eventually
 import org.scalatest.mockito.MockitoSugar
 import org.scalatest.time.SpanSugar
+import org.scalatest.{BeforeAndAfterAll, Matchers, WordSpecLike}
 import stellar.sdk.model.Thresholds
 import stellar.sdk.model.response.AccountResponse
 import stellar.sdk.{KeyPair, Network}
