@@ -21,7 +21,7 @@ class PaymentRepository(repo: PaymentRepo) extends Actor {
 
   private def newState(state: State = State()): Receive =
     subscribe(state) orElse poll(state) orElse schedulePoll orElse invalid orElse submitted orElse updateStatus
-  
+
   def subscribe(state: State): PartialFunction[Any, Unit] = {
     case Subscribe(sub) =>
       logger.debug(s"Subscribing for payment updates: $sub")
