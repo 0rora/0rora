@@ -6,6 +6,7 @@ import akka.testkit.{ImplicitSender, TestKit, TestProbe}
 import models.Generators.{genAccount, sampleOf}
 import models.{AppConfig, Generators, StubNetwork}
 import org.mockito.Mockito
+import org.mockito.Mockito.when
 import org.scalatest.{BeforeAndAfterAll, Matchers, WordSpecLike}
 import org.scalatest.concurrent.Eventually
 import org.scalatest.mockito.MockitoSugar
@@ -13,6 +14,8 @@ import org.scalatest.time.SpanSugar
 import stellar.sdk.model.Thresholds
 import stellar.sdk.model.response.AccountResponse
 import stellar.sdk.{KeyPair, Network}
+
+import scala.concurrent.Future
 
 class AccountRepositorySpec extends TestKit(ActorSystem("account-repository-spec")) with ImplicitSender
   with WordSpecLike with Matchers with BeforeAndAfterAll with MockitoSugar with Eventually with SpanSugar {
@@ -46,7 +49,7 @@ class AccountRepositorySpec extends TestKit(ActorSystem("account-repository-spec
     "do nothing if the lookup fails" in {
       val n = mock[Network]
       val accn = sampleOf(genAccount)
-      Mockito.when(n.account(accn.publicKey.asPublicKey)).thenThrow(new RuntimeException("!"))
+      when(n.account(accn.publicKey.asPublicKey)).thenReturn(Future.failed(new RuntimeException("!")))
       val conf = new AppConfig() {
         override val network: Network = n
         override val accounts: Map[String, KeyPair] = Map.empty
