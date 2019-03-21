@@ -1,11 +1,11 @@
 package actors
 
-import actors.PaymentController.{Subscribe, UpdateAccount}
+import actors.PaymentController.{PaymentBatch, Subscribe, UpdateAccount}
 import actors.PaymentRepository.{SchedulePoll, UpdateStatus}
 import akka.actor.{ActorSystem, Props}
 import akka.testkit.{ImplicitSender, TestKit, TestProbe}
 import models.Generators.{genScheduledPayment, sampleOf}
-import models.{AppConfig, RawAccountId, StubNetwork}
+import models.{AppConfig, Generators, RawAccountId, StubNetwork}
 import org.scalacheck.Gen
 import org.scalatest.concurrent.Eventually
 import org.scalatest.mockito.MockitoSugar
@@ -84,15 +84,55 @@ class PaymentControllerSpec extends TestKit(ActorSystem("payment-controller-spec
   }
 
   "payment controller state" must {
+    "add a pending payment, whilst decrementing the validations-in-flight counter" in {
+      val s = PaymentController.State(
+        accounts = Map(sampleAccount.publicKey.accountId -> sampleAccount),
+        validationsInFlight = 2
+      )
+      val payment = sampleOf(genScheduledPayment)
+      val (s_, batches) = s.addPending(payment)
+      assert(s_.validationsInFlight == 1)
+      assert(s_.valid == Seq(payment))
+      assert(batches.isEmpty)
+    }
+
+    "flush a batch when adding the 100th pending payment" in {
+      val payments = sampleOf(Gen.listOfN(100, genScheduledPayment))
+      val s = PaymentController.State(
+        valid = payments.tail,
+        accounts = Map(sampleAccount.publicKey.accountId -> sampleAccount),
+        validationsInFlight = 2
+      )
+      val (s_, batches) = s.addPending(payments.head)
+      assert(s_.validationsInFlight == 1)
+      assert(s_.valid.isEmpty)
+      assert(s_.accounts.isEmpty)
+      assert(batches == Seq(PaymentBatch(payments.reverse, sampleAccount)))
+    }
+
+    "not flush a batch when adding the 100th pending payment, but there are no free accounts" in {
+      val payments = sampleOf(Gen.listOfN(100, genScheduledPayment))
+      val s = PaymentController.State(
+        valid = payments.tail,
+        accounts = Map.empty,
+        validationsInFlight = 2
+      )
+      val (s_, batches) = s.addPending(payments.head)
+      assert(s_.validationsInFlight == 1)
+      assert(s_.valid.size == 100)
+      assert(s_.accounts.isEmpty)
+      assert(batches.isEmpty)
+    }
+
     "flush partial batches when requested" in {
       val s = PaymentController.State(
         valid = sampleOf(Gen.listOfN(20, genScheduledPayment)),
         accounts = Map(sampleAccount.publicKey.accountId -> sampleAccount)
       )
-      val (s_, batch) = s.flush
+      val (s_, batches) = s.flush
       assert(s_.valid.isEmpty)
-      assert(batch.size == 1)
-      assert(batch.head.ps.size == 20)
+      assert(batches.size == 1)
+      assert(batches.head.ps.size == 20)
     }
   }
 

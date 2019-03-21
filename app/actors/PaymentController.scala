@@ -188,7 +188,7 @@ object PaymentController {
 
     def addPending(p: Payment): (State, Seq[PaymentBatch]) = {
       val valid_ = p +: valid
-      if (valid.size >= 100 && accounts.nonEmpty) {
+      if (valid_.size >= 100 && accounts.nonEmpty) {
         val (batches, remainingPayments, remainingAccounts) = group(valid_.reverse, accounts.values.toSeq, fullBatchesOnly = true)
         val accountsMap = remainingAccounts.map(a => a.publicKey.accountId -> a).toMap
         copy(valid = remainingPayments, accounts = accountsMap).decValidating -> batches
