@@ -1,9 +1,9 @@
 package actors
 
+import java.time.ZonedDateTime
 import java.time.temporal.ChronoUnit
-import java.time.{LocalDateTime, Period, ZonedDateTime}
 
-import actors.PaymentController.{FlushBatch, Invalid, Subscribe}
+import actors.PaymentController.{FlushBatch, Invalid, StreamInProgress, Subscribe}
 import actors.PaymentRepository._
 import akka.actor.{Actor, ActorRef}
 import models.Payment
@@ -31,7 +31,10 @@ class PaymentRepository(repo: PaymentRepo) extends Actor {
   def poll(state: State): PartialFunction[Any, Unit] = {
     case Poll =>
       logger.debug("Polling")
+      state.subs.foreach(_ ! StreamInProgress(true))
       repo.due.foreach(p => state.subs.foreach(_ ! p))
+      state.subs.foreach(_ ! StreamInProgress(false))
+      self ! SchedulePoll
   }
 
   val schedulePoll: PartialFunction[Any, Unit] = {

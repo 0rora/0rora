@@ -1,16 +1,16 @@
 package actors
 
 import actors.PaymentController._
-import actors.PaymentRepository.{SchedulePoll, UpdateStatus}
+import actors.PaymentRepository.UpdateStatus
 import akka.actor.{Actor, ActorRef}
 import models.Payment.Failed
 import models.{AppConfig, Payment}
 import play.api.Logger
-import stellar.sdk.{Network, PublicKeyOps}
 import stellar.sdk.model.response.{TransactionApproved, TransactionPostResponse, TransactionRejected}
 import stellar.sdk.model.result.TransactionResult.{BadSequenceNumber, InsufficientBalance}
 import stellar.sdk.model.result.{PaymentResult, PaymentSuccess, TransactionFailure, TransactionNotAttempted}
 import stellar.sdk.model.{Account, Transaction}
+import stellar.sdk.{Network, PublicKeyOps}
 
 import scala.annotation.tailrec
 import scala.concurrent.Future
@@ -33,7 +33,7 @@ class PaymentController(payRepo: ActorRef, accountRepo: ActorRef, config: AppCon
 
   private def newState(s: State): Receive = {
     pendingPayment(s) orElse validPayment(s) orElse invalidPayment(s) orElse
-      payBatch(s) orElse flush(s) orElse updateAccount(s)
+      payBatch(s) orElse flush(s) orElse updateAccount(s) orElse streamProgress(s)
   }
 
   // A new payment has arrived. Validate it.
@@ -73,7 +73,6 @@ class PaymentController(payRepo: ActorRef, accountRepo: ActorRef, config: AppCon
       logger.debug("Flushing batches")
       val (s_, batches) = s.flush
       batches.foreach(self ! _)
-      payRepo ! SchedulePoll
       context.become(newState(s_))
   }
 
@@ -137,8 +136,13 @@ class PaymentController(payRepo: ActorRef, accountRepo: ActorRef, config: AppCon
   def updateAccount(s: State): PartialFunction[Any, Unit] = {
     case UpdateAccount(accn) =>
       logger.debug(s"[account ${accn.publicKey.accountId}] Updated - seq no ${accn.sequenceNumber}")
-      if (s.valid.nonEmpty && s.accounts.isEmpty) self ! FlushBatch
       context.become(newState(s.returnAccount(accn)))
+  }
+
+  def streamProgress(s: State): PartialFunction[Any, Unit] = {
+    case StreamInProgress(in) =>
+      if (!in && s.validationsInFlight == 0) self ! FlushBatch
+      context.become(newState(s.copy(streamInProgress = in)))
   }
 
   def validate(p: Payment): Future[Payment] = for {
@@ -178,11 +182,14 @@ object PaymentController {
 
   case class UpdateAccount(accn: Account)
 
+  case class StreamInProgress(inProgress: Boolean)
+
 
   case class State(valid: Seq[Payment] = Nil,
                    accounts: Map[String, Account] = Map.empty,
                    batchId: Long = 0,
-                   validationsInFlight: Int = 0) {
+                   validationsInFlight: Int = 0,
+                   streamInProgress: Boolean = false) {
 
     def incValidating: State = copy(validationsInFlight = validationsInFlight + 1)
     def decValidating: State = copy(validationsInFlight = validationsInFlight - 1)

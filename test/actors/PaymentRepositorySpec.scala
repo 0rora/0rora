@@ -2,7 +2,7 @@ package actors
 
 import java.time.ZonedDateTime
 
-import actors.PaymentController.{Invalid, Subscribe}
+import actors.PaymentController.{Invalid, StreamInProgress, Subscribe}
 import actors.PaymentRepository.{Poll, SchedulePoll, UpdateStatus}
 import akka.actor.{ActorSystem, Props}
 import akka.testkit.{ImplicitSender, TestKit, TestProbe}
@@ -28,6 +28,7 @@ class PaymentRepositorySpec extends TestKit(ActorSystem("payment-repository-spec
       val repo = mock[PaymentRepo]
       val payments = sampleOf(Gen.listOfN(5, genScheduledPayment))
       when(repo.due).thenReturn(payments.iterator)
+      when(repo.earliestTimeDue).thenReturn(None)
 
       val actor = system.actorOf(Props(new PaymentRepository(repo)))
       val probe = TestProbe()
@@ -36,14 +37,16 @@ class PaymentRepositorySpec extends TestKit(ActorSystem("payment-repository-spec
       actor ! Subscribe(sub)
       actor ! Poll
 
+      probe.expectMsg(5.seconds, StreamInProgress(true))
       payments.foreach(probe.expectMsg(5.seconds, _))
+      probe.expectMsg(5.seconds, StreamInProgress(false))
     }
   }
 
   "scheduling a poll" must {
     "poll immediately when there are payments due" in {
       val repo = mock[PaymentRepo]
-      when(repo.earliestTimeDue).thenReturn(Some(ZonedDateTime.now().minusMinutes(1)))
+      when(repo.earliestTimeDue).thenReturn(Some(ZonedDateTime.now().minusMinutes(1)), None)
       when(repo.due).thenReturn(Iterator.empty)
       val actor = system.actorOf(Props(new PaymentRepository(repo)))
 
@@ -71,7 +74,7 @@ class PaymentRepositorySpec extends TestKit(ActorSystem("payment-repository-spec
       val actor = system.actorOf(Props(new PaymentRepository(repo)))
 
       when(repo.due).thenReturn(Iterator.empty)
-      when(repo.earliestTimeDue).thenReturn(Some(ZonedDateTime.now().plusSeconds(2)))
+      when(repo.earliestTimeDue).thenReturn(Some(ZonedDateTime.now().plusSeconds(2)), None)
       actor ! SchedulePoll
 
       Thread.sleep(500L)

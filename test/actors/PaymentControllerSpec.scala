@@ -48,7 +48,6 @@ class PaymentControllerSpec extends TestKit(ActorSystem("payment-controller-spec
 
       actor ! payment
 
-      payRepoProbe.expectMsg(3.seconds, SchedulePoll)
       eventually(timeout(3.seconds)) {
         val posted = config.network.asInstanceOf[StubNetwork].posted
         assert(posted.size == 1)
@@ -69,8 +68,7 @@ class PaymentControllerSpec extends TestKit(ActorSystem("payment-controller-spec
       payRepoProbe.expectMsg(3.seconds, Subscribe(actor))
       accnRepoProbe.expectMsg(3.seconds, Subscribe(actor))
       accnRepoProbe.expectMsg(3.seconds, config.accounts.head._2.asPublicKey)
-      actor ! UpdateAccount(Account(config.accounts.head._2.asPublicKey, 123L))
-      actor ! UpdateAccount(Account(config.accounts.last._2.asPublicKey, 123L))
+      config.accounts.values.map(_.asPublicKey).map(Account(_, 123L)).foreach(actor ! UpdateAccount(_))
 
       payments.foreach(actor ! _)
 
