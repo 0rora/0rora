@@ -13,7 +13,7 @@ import stellar.sdk.model.{Account, Transaction}
 import stellar.sdk.{Network, PublicKeyOps}
 
 import scala.annotation.tailrec
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration._
 import scala.util.{Failure, Success, Try}
 
@@ -41,7 +41,7 @@ class PaymentController(payRepo: ActorRef, accountRepo: ActorRef, config: AppCon
     case p: Payment =>
       logger.trace(s"[payment ${p.id.get}] is pending")
       context.become(newState(s.incValidating))
-      validate(p) onComplete {
+      PaymentController.validate(p)(context.dispatcher, config) onComplete {
         case Success(valid) =>
           logger.trace(s"[payment ${p.id.get}] is valid")
           self ! Valid(valid)
@@ -145,14 +145,6 @@ class PaymentController(payRepo: ActorRef, accountRepo: ActorRef, config: AppCon
       context.become(newState(s.copy(streamInProgress = in)))
   }
 
-  def validate(p: Payment): Future[Payment] = for {
-    s <- p.source.pk()
-    d <- p.destination.pk()
-  } yield {
-    if (config.accounts.contains(s.accountId)) p.copy(sourceResolved = Some(s), destinationResolved = Some(d))
-    else throw MissingSignerException(s)
-  }
-
   def transact(b: PaymentBatch): Future[TransactionPostResponse] = {
     val PaymentBatch(payments, source) = b
     val ops = payments.flatMap(_.asOperation)
@@ -184,6 +176,13 @@ object PaymentController {
 
   case class StreamInProgress(inProgress: Boolean)
 
+  def validate(p: Payment)(implicit ec: ExecutionContext, config: AppConfig): Future[Payment] = for {
+    s <- p.source.pk()
+    d <- p.destination.pk()
+  } yield {
+    if (config.accounts.contains(s.accountId)) p.copy(sourceResolved = Some(s), destinationResolved = Some(d))
+    else throw MissingSignerException(s)
+  }
 
   case class State(valid: Seq[Payment] = Nil,
                    accounts: Map[String, Account] = Map.empty,

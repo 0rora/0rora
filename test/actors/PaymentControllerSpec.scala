@@ -1,6 +1,6 @@
 package actors
 
-import actors.PaymentController.{PaymentBatch, Subscribe, UpdateAccount}
+import actors.PaymentController.{Invalid, PaymentBatch, Subscribe, UpdateAccount}
 import actors.PaymentRepository.{SchedulePoll, UpdateStatus}
 import akka.actor.{ActorSystem, Props}
 import akka.testkit.{ImplicitSender, TestKit, TestProbe}
@@ -13,7 +13,9 @@ import org.scalatest.time.SpanSugar
 import org.scalatest.{BeforeAndAfterAll, Matchers, WordSpecLike}
 import stellar.sdk.model.op.PaymentOperation
 import stellar.sdk.model.{Account, NativeAmount}
-import stellar.sdk.{KeyPair, Network}
+import stellar.sdk.{InvalidAccountId, KeyPair, Network}
+
+import scala.concurrent.Await
 
 class PaymentControllerSpec extends TestKit(ActorSystem("payment-controller-spec")) with ImplicitSender
   with WordSpecLike with Matchers with BeforeAndAfterAll with MockitoSugar with Eventually with SpanSugar {
@@ -58,6 +60,22 @@ class PaymentControllerSpec extends TestKit(ActorSystem("payment-controller-spec
         )))
       }
     }
+
+    "be sent to the payment repo when invalid" in {
+      val (payRepoProbe, accnRepoProbe, config) = setup()
+      val payment = sampleOf(genScheduledPayment).copy(source = RawAccountId("invalid"))
+      val accn = Account(config.accounts.head._2.asPublicKey, 123L)
+
+      val actor = system.actorOf(Props(new PaymentController(payRepoProbe.ref, accnRepoProbe.ref, config)))
+      payRepoProbe.expectMsg(3.seconds, Subscribe(actor))
+      accnRepoProbe.expectMsg(3.seconds, Subscribe(actor))
+      accnRepoProbe.expectMsg(3.seconds, config.accounts.head._2.asPublicKey)
+      actor ! UpdateAccount(accn)
+
+      actor ! payment
+
+      payRepoProbe.expectMsg(Invalid(payment))
+    }
   }
 
   "many pending payments" must {
@@ -77,6 +95,43 @@ class PaymentControllerSpec extends TestKit(ActorSystem("payment-controller-spec
         assert(posted.size == 2)
         assert(posted.head.transaction.operations.size == 100)
         assert(posted.last.transaction.operations.size == 20)
+      }
+    }
+  }
+
+  "validation of a payment" must {
+    "succeed when source and destination are resolvable and source is known" in {
+      val (_, _, config) = setup()
+      val payment = sampleOf(genScheduledPayment).copy(source = RawAccountId(config.accounts.values.head.accountId))
+      assert(Await.result(PaymentController.validate(payment)(system.dispatcher, config), 1.second) ==
+        payment.copy(
+          sourceResolved = Some(KeyPair.fromAccountId(payment.source.account)),
+          destinationResolved = Some(KeyPair.fromAccountId(payment.destination.account))
+        )
+      )
+    }
+
+    "fail when source is resolvable but is not known" in {
+      val (_, _, config) = setup()
+      val payment = sampleOf(genScheduledPayment)
+      assertThrows[MissingSignerException] {
+        Await.result(PaymentController.validate(payment)(system.dispatcher, config), 1.second)
+      }
+    }
+
+    "fail when source is not resolvable" in {
+      val (_, _, config) = setup()
+      val payment = sampleOf(genScheduledPayment).copy(source = RawAccountId("invalidness"))
+      assertThrows[InvalidAccountId] {
+        Await.result(PaymentController.validate(payment)(system.dispatcher, config), 1.second)
+      }
+    }
+
+    "fail when destination is not resolvable" in {
+      val (_, _, config) = setup()
+      val payment = sampleOf(genScheduledPayment).copy(destination = RawAccountId("invalidness"))
+      assertThrows[InvalidAccountId] {
+        Await.result(PaymentController.validate(payment)(system.dispatcher, config), 1.second)
       }
     }
   }
