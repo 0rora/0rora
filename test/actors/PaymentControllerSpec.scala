@@ -1,11 +1,10 @@
 package actors
 
 import actors.PaymentController._
-import actors.PaymentRepository.{SchedulePoll, UpdateStatus}
 import akka.actor.{ActorSystem, Props}
 import akka.testkit.{ImplicitSender, TestKit, TestProbe}
 import models.Generators.{genScheduledPayment, sampleOf}
-import models.{AppConfig, Generators, RawAccountId, StubNetwork}
+import models.{AppConfig, RawAccountId, StubNetwork}
 import org.scalacheck.Gen
 import org.scalatest.concurrent.Eventually
 import org.scalatest.mockito.MockitoSugar
@@ -48,7 +47,9 @@ class PaymentControllerSpec extends TestKit(ActorSystem("payment-controller-spec
       accnRepoProbe.expectMsg(3.seconds, config.accounts.head._2.asPublicKey)
       actor ! UpdateAccount(accn)
 
+      actor ! StreamInProgress(true)
       actor ! payment
+      actor ! StreamInProgress(false)
 
       eventually(timeout(3.seconds)) {
         val posted = config.network.asInstanceOf[StubNetwork].posted
@@ -72,7 +73,9 @@ class PaymentControllerSpec extends TestKit(ActorSystem("payment-controller-spec
       accnRepoProbe.expectMsg(3.seconds, config.accounts.head._2.asPublicKey)
       actor ! UpdateAccount(accn)
 
+      actor ! StreamInProgress(true)
       actor ! payment
+      actor ! StreamInProgress(false)
 
       payRepoProbe.expectMsg(Invalid(payment))
     }

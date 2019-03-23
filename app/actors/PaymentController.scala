@@ -54,14 +54,14 @@ class PaymentController(payRepo: ActorRef, accountRepo: ActorRef, config: AppCon
 
   def invalidPayment(s: State): PartialFunction[Any, Unit] = {
     case Invalid(_) =>
-      if (s.validationsInFlight == 1) self ! FlushBatch
+      if (s.validationsInFlight == 1 && !s.streamInProgress) self ! FlushBatch
       context.become(newState(s.decValidating))
   }
 
   // A payment has been validated. Add it to the state and issue batches if necessary.
   def validPayment(s: State): PartialFunction[Any, Unit] = {
     case Valid(p) =>
-      if (s.validationsInFlight == 1) self ! FlushBatch
+      if (s.validationsInFlight == 1 && !s.streamInProgress) self ! FlushBatch
       val (s_, batches) = s.addPending(p)
       batches.foreach(self ! _)
       context.become(newState(s_))
