@@ -1,6 +1,6 @@
 package actors
 
-import actors.PaymentController.{Invalid, PaymentBatch, Subscribe, UpdateAccount}
+import actors.PaymentController._
 import actors.PaymentRepository.{SchedulePoll, UpdateStatus}
 import akka.actor.{ActorSystem, Props}
 import akka.testkit.{ImplicitSender, TestKit, TestProbe}
@@ -88,13 +88,13 @@ class PaymentControllerSpec extends TestKit(ActorSystem("payment-controller-spec
       accnRepoProbe.expectMsg(3.seconds, config.accounts.head._2.asPublicKey)
       config.accounts.values.map(_.asPublicKey).map(Account(_, 123L)).foreach(actor ! UpdateAccount(_))
 
+      actor ! StreamInProgress(true)
       payments.foreach(actor ! _)
+      actor ! StreamInProgress(false)
 
       eventually(timeout(3.seconds)) {
         val posted = config.network.asInstanceOf[StubNetwork].posted
-        assert(posted.size == 2)
-        assert(posted.head.transaction.operations.size == 100)
-        assert(posted.last.transaction.operations.size == 20)
+        assert(posted.map(_.transaction.operations.size) == Seq(100, 20))
       }
     }
   }
