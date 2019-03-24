@@ -136,6 +136,7 @@ class PaymentController(payRepo: ActorRef, accountRepo: ActorRef, config: AppCon
   def updateAccount(s: State): PartialFunction[Any, Unit] = {
     case UpdateAccount(accn) =>
       logger.debug(s"[account ${accn.publicKey.accountId}] Updated - seq no ${accn.sequenceNumber}")
+      if (s.validationsInFlight == 0 && !s.streamInProgress && s.valid.nonEmpty) self ! FlushBatch
       context.become(newState(s.returnAccount(accn)))
   }
 

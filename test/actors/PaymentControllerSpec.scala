@@ -100,6 +100,31 @@ class PaymentControllerSpec extends TestKit(ActorSystem("payment-controller-spec
         assert(posted.map(_.transaction.operations.size) == Seq(100, 20))
       }
     }
+
+    "be processed in time when there are insufficient accounts" in {
+      val (payRepoProbe, accnRepoProbe, config) = setup(numAccounts = 2)
+      val payments = sampleOf(Gen.listOfN(120, genScheduledPayment)).map(_.copy(source = RawAccountId(config.accounts.head._1)))
+      val actor = system.actorOf(Props(new PaymentController(payRepoProbe.ref, accnRepoProbe.ref, config)))
+      payRepoProbe.expectMsg(3.seconds, Subscribe(actor))
+      accnRepoProbe.expectMsg(3.seconds, Subscribe(actor))
+      accnRepoProbe.expectMsg(3.seconds, config.accounts.head._2.asPublicKey)
+      actor ! UpdateAccount(Account(config.accounts.values.head.asPublicKey, 123L))
+
+      actor ! StreamInProgress(true)
+      payments.foreach(actor ! _)
+      actor ! StreamInProgress(false)
+
+      eventually(timeout(3.seconds)) {
+        val posted = config.network.asInstanceOf[StubNetwork].posted
+        assert(posted.map(_.transaction.operations.size) == Seq(100))
+      }
+
+      actor ! UpdateAccount(Account(config.accounts.values.last.asPublicKey, 123L))
+      eventually(timeout(3.seconds)) {
+        val posted = config.network.asInstanceOf[StubNetwork].posted
+        assert(posted.map(_.transaction.operations.size) == Seq(100, 20))
+      }
+    }
   }
 
   "validation of a payment" must {
