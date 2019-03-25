@@ -22,7 +22,7 @@ case class StubNetwork(respondWith: Seq[TransactionPostResponse] = Seq(Transacti
     override def post(txn: SignedTransaction)(implicit ec: ExecutionContext): Future[TransactionPostResponse] = {
       posted.append(txn)
       val transactionPostResponse = respondWith(response)
-      response = math.max(response + 1, respondWith.size - 1)
+      response = math.min(response + 1, respondWith.size - 1)
       Future(transactionPostResponse)
     }
     override def get[T](path: String, params: Map[String, String])(implicit evidence$1: ClassTag[T], ec: ExecutionContext, m: Manifest[T]): Future[T] = ???
