@@ -3,7 +3,7 @@ package actors
 import java.time.ZonedDateTime
 import java.time.temporal.ChronoUnit
 
-import actors.PaymentController.{FlushBatch, Invalid, StreamInProgress, Subscribe}
+import actors.PaymentController.{Invalid, StreamInProgress, Subscribe}
 import actors.PaymentRepository._
 import akka.actor.{Actor, ActorRef}
 import models.Payment

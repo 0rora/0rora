@@ -54,14 +54,14 @@ class PaymentController(payRepo: ActorRef, accountRepo: ActorRef, config: AppCon
 
   def invalidPayment(s: State): PartialFunction[Any, Unit] = {
     case Invalid(_) =>
-      if (s.validationsInFlight == 1 && !s.streamInProgress) self ! FlushBatch
+      if (s.validationsInFlight == 1 && s.streamsInProgress == 0) self ! FlushBatch
       context.become(newState(s.decValidating))
   }
 
   // A payment has been validated. Add it to the state and issue batches if necessary.
   def validPayment(s: State): PartialFunction[Any, Unit] = {
     case Valid(p) =>
-      if (s.validationsInFlight == 1 && !s.streamInProgress) self ! FlushBatch
+      if (s.validationsInFlight == 1 && s.streamsInProgress == 0) self ! FlushBatch
       val (s_, batches) = s.addPending(p)
       batches.foreach(self ! _)
       context.become(newState(s_))
@@ -95,15 +95,20 @@ class PaymentController(payRepo: ActorRef, accountRepo: ActorRef, config: AppCon
 
         case TransactionFailure(_, operationResults) =>
           logger.debug(s"[batch $id] Attempted, but failed. ${x.detail}: $operationResults")
+          self ! UpdateAccount(b.accn.withIncSeq)
           val paymentsByResult = operationResults.zip(b.ps).groupBy(_._1).mapValues(_.map(_._2))
+          self ! StreamInProgress(true)
           paymentsByResult.foreach {
             // otherwise successful payments that were prevented from transacting. Try them again.
             case (PaymentSuccess, ps) => ps.foreach(self ! _)
+
             // payments that failed in their own right. Fail them in repo.
             case (r: PaymentResult, ps) => payRepo ! UpdateStatus(ps, Failed, Some(name(r)))
+
             // payments for which we have the default op result code, i.e. they weren't even assessed. Try them again.
             case (_, ps) => ps.foreach(self ! _)
           }
+          self ! StreamInProgress(false)
 
         case TransactionNotAttempted(reason, _) =>
           logger.debug(s"[batch $id] Rejected because $reason")
@@ -136,14 +141,16 @@ class PaymentController(payRepo: ActorRef, accountRepo: ActorRef, config: AppCon
   def updateAccount(s: State): PartialFunction[Any, Unit] = {
     case UpdateAccount(accn) =>
       logger.debug(s"[account ${accn.publicKey.accountId}] Updated - seq no ${accn.sequenceNumber}")
-      if (s.validationsInFlight == 0 && !s.streamInProgress && s.valid.nonEmpty) self ! FlushBatch
+      if (s.validationsInFlight == 0 && s.streamsInProgress == 0 && s.valid.nonEmpty) self ! FlushBatch
       context.become(newState(s.returnAccount(accn)))
   }
 
   def streamProgress(s: State): PartialFunction[Any, Unit] = {
     case StreamInProgress(in) =>
-      if (!in && s.validationsInFlight == 0) self ! FlushBatch
-      context.become(newState(s.copy(streamInProgress = in)))
+      val incOrDec = if (in) 1 else -1
+      val streamsInProgress = s.streamsInProgress + incOrDec
+      if (streamsInProgress == 0 && s.validationsInFlight == 0) self ! FlushBatch
+      context.become(newState(s.copy(streamsInProgress = streamsInProgress)))
   }
 
   def transact(b: PaymentBatch): Future[TransactionPostResponse] = {
@@ -154,7 +161,7 @@ class PaymentController(payRepo: ActorRef, accountRepo: ActorRef, config: AppCon
     Transaction(source, ops).sign(h, t: _*).submit()
   }
 
-  def name(a: Any): String = a.getClass.getSimpleName.toLowerCase().replace("$", "")
+  def name(a: Any): String = a.getClass.getSimpleName.replace("$", "")
 
 }
 
@@ -189,7 +196,7 @@ object PaymentController {
                    accounts: Map[String, Account] = Map.empty,
                    batchId: Long = 0,
                    validationsInFlight: Int = 0,
-                   streamInProgress: Boolean = false) {
+                   streamsInProgress: Int = 0) {
 
     def incValidating: State = copy(validationsInFlight = validationsInFlight + 1)
     def decValidating: State = copy(validationsInFlight = validationsInFlight - 1)
