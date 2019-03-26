@@ -118,8 +118,8 @@ class PaymentController(payRepo: ActorRef, accountRepo: ActorRef, config: AppCon
               streamPayments(b.ps)
             case BadSequenceNumber =>
               // the source account became out of sync. Retry the payments and refresh the account.
-              streamPayments(b.ps)
               accountRepo ! b.accn.publicKey
+              streamPayments(b.ps)
             case r =>
               // any other reason is an unexpected error. Fail the payments and log. Refresh the account for good measure.
               logger.error(s"Transaction was not attempted for unexpected reason: $r")

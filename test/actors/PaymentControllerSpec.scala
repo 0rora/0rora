@@ -14,7 +14,7 @@ import org.scalatest.time.SpanSugar
 import org.scalatest.{BeforeAndAfterAll, Matchers, WordSpecLike}
 import stellar.sdk.model.op.PaymentOperation
 import stellar.sdk.model.response.{TransactionApproved, TransactionPostResponse, TransactionRejected}
-import stellar.sdk.model.result.TransactionResult.InsufficientBalance
+import stellar.sdk.model.result.TransactionResult.{BadSequenceNumber, InsufficientBalance}
 import stellar.sdk.model.result._
 import stellar.sdk.model.{Account, NativeAmount}
 import stellar.sdk.util.ByteArrays
@@ -229,6 +229,34 @@ class PaymentControllerSpec extends TestKit(ActorSystem("payment-controller-spec
         assert(posted.map(_.transaction.operations.size) == Seq(1, 1))
         assert(posted.map(_.transaction.source).distinct.size == 2)
       }
+    }
+
+    "retry the payments and refresh the account if the sequence number is incorrect" in {
+      val (payRepoProbe, accnRepoProbe, config) = setup(
+        respondWith = Seq(
+          TransactionRejected(1, "", "", Nil, "",
+            ByteArrays.base64(TransactionNotAttempted(BadSequenceNumber, NativeAmount(100)).encode)),
+          TransactionApproved("", 1, "", "", "")
+        ),
+        numAccounts = 2
+      )
+      val payment = sampleOf(genScheduledPayment).copy(source = RawAccountId(config.accounts.head._1))
+
+      val actor = system.actorOf(Props(new PaymentController(payRepoProbe.ref, accnRepoProbe.ref, config)))
+      payRepoProbe.expectMsg(3.seconds, Subscribe(actor))
+      accnRepoProbe.expectMsg(3.seconds, Subscribe(actor))
+      accnRepoProbe.expectMsg(3.seconds, config.accounts.head._2.asPublicKey)
+      config.accounts.values.map(_.asPublicKey).map(Account(_, 123L)).foreach(actor ! UpdateAccount(_))
+
+      actor ! StreamInProgress(true)
+      actor ! payment
+      actor ! StreamInProgress(false)
+
+      eventually(timeout(3.seconds)) {
+        val posted = config.network.asInstanceOf[StubNetwork].posted
+        assert(posted.map(_.transaction.operations.size) == Seq(1, 1))
+      }
+      accnRepoProbe.expectMsg(3.seconds, config.accounts.values.last.asPublicKey)
     }
   }
 
