@@ -14,7 +14,7 @@ import org.scalatest.time.SpanSugar
 import org.scalatest.{BeforeAndAfterAll, Matchers, WordSpecLike}
 import stellar.sdk.model.op.PaymentOperation
 import stellar.sdk.model.response.{TransactionApproved, TransactionPostResponse, TransactionRejected}
-import stellar.sdk.model.result.TransactionResult.{BadSequenceNumber, InsufficientBalance}
+import stellar.sdk.model.result.TransactionResult.{BadSequenceNumber, InsufficientBalance, UnusedSignatures}
 import stellar.sdk.model.result._
 import stellar.sdk.model.{Account, NativeAmount}
 import stellar.sdk.util.ByteArrays
@@ -257,6 +257,36 @@ class PaymentControllerSpec extends TestKit(ActorSystem("payment-controller-spec
         assert(posted.map(_.transaction.operations.size) == Seq(1, 1))
       }
       accnRepoProbe.expectMsg(3.seconds, config.accounts.values.last.asPublicKey)
+    }
+
+    "fail the payments and refresh the account for any other failure reason" in {
+      val (payRepoProbe, accnRepoProbe, config) = setup(
+        respondWith = Seq(
+          TransactionRejected(1, "", "", Nil, "",
+            ByteArrays.base64(TransactionNotAttempted(UnusedSignatures, NativeAmount(100)).encode))
+        )
+      )
+      val payment = sampleOf(genScheduledPayment).copy(source = RawAccountId(config.accounts.head._1))
+
+      val actor = system.actorOf(Props(new PaymentController(payRepoProbe.ref, accnRepoProbe.ref, config)))
+      payRepoProbe.expectMsg(3.seconds, Subscribe(actor))
+      accnRepoProbe.expectMsg(3.seconds, Subscribe(actor))
+      accnRepoProbe.expectMsg(3.seconds, config.accounts.head._2.asPublicKey)
+      config.accounts.values.map(_.asPublicKey).map(Account(_, 123L)).foreach(actor ! UpdateAccount(_))
+
+      actor ! StreamInProgress(true)
+      actor ! payment
+      actor ! StreamInProgress(false)
+
+      eventually(timeout(3.seconds)) {
+        val posted = config.network.asInstanceOf[StubNetwork].posted
+        assert(posted.map(_.transaction.operations.size) == Seq(1))
+      }
+      accnRepoProbe.expectMsg(3.seconds, config.accounts.values.last.asPublicKey)
+      payRepoProbe.expectMsg(3.seconds, UpdateStatus(Seq(payment.copy(
+        sourceResolved = Some(KeyPair.fromAccountId(payment.source.account)),
+        destinationResolved = Some(KeyPair.fromAccountId(payment.destination.account))
+      )), Failed, Some("UnusedSignatures")))
     }
   }
 
