@@ -115,10 +115,10 @@ class PaymentController(payRepo: ActorRef, accountRepo: ActorRef, config: AppCon
           reason match {
             case InsufficientBalance =>
               // the source account did not have enough funds to pay the fee. Keep it out of circulation and retry payments.
-              b.ps.foreach(self ! _)
+              streamPayments(b.ps)
             case BadSequenceNumber =>
               // the source account became out of sync. Retry the payments and refresh the account.
-              b.ps.foreach(self ! _)
+              streamPayments(b.ps)
               accountRepo ! b.accn.publicKey
             case r =>
               // any other reason is an unexpected error. Fail the payments and log. Refresh the account for good measure.
@@ -163,6 +163,11 @@ class PaymentController(payRepo: ActorRef, accountRepo: ActorRef, config: AppCon
 
   def name(a: Any): String = a.getClass.getSimpleName.replace("$", "")
 
+  private def streamPayments(ps: Seq[Payment]): Unit = {
+    self ! StreamInProgress(true)
+    ps.foreach(self ! _)
+    self ! StreamInProgress(false)
+  }
 }
 
 
