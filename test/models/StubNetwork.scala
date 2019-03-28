@@ -12,15 +12,22 @@ import scala.collection.mutable
 import scala.concurrent.{ExecutionContext, Future}
 import scala.reflect.ClassTag
 
-case class StubNetwork(respondWith: TransactionPostResponse = TransactionApproved("", 1, "", "", "")) extends Network {
+case class StubNetwork(respondWith: Seq[TransactionPostResponse] = Seq(TransactionApproved("", 1, "", "", "")),
+                       fail: Boolean = false) extends Network {
   override def passphrase: String = "stub network"
 
   val posted: mutable.Buffer[SignedTransaction] = mutable.Buffer.empty
+  var response: Int = 0
 
   override val horizon: HorizonAccess = new HorizonAccess {
     override def post(txn: SignedTransaction)(implicit ec: ExecutionContext): Future[TransactionPostResponse] = {
       posted.append(txn)
-      Future(respondWith)
+      if (fail) Future.failed(new RuntimeException("failed for test purposes"))
+      else {
+        val transactionPostResponse = respondWith(response)
+        response = math.min(response + 1, respondWith.size - 1)
+        Future.successful(transactionPostResponse)
+      }
     }
     override def get[T](path: String, params: Map[String, String])(implicit evidence$1: ClassTag[T], ec: ExecutionContext, m: Manifest[T]): Future[T] = ???
     override def getStream[T](path: String, de: CustomSerializer[T], cursor: HorizonCursor, order: HorizonOrder, params: Map[String, String])(implicit evidence$2: ClassTag[T], ec: ExecutionContext, m: Manifest[T]): Future[Stream[T]] = ???

@@ -18,24 +18,24 @@ class PaymentsController @Inject()(cc: MessagesControllerComponents,
 
   private val stroopsInLumen = 10000000.0
 
-  private val paymentResultByCode: Map[Int, PaymentResult] = Seq(
-    PaymentSuccess, PaymentMalformed, PaymentUnderfunded, PaymentSourceNoTrust, PaymentSourceNotAuthorised,
-    PaymentNoDestination, PaymentDestinationNoTrust, PaymentDestinationNotAuthorised, PaymentDestinationLineFull, PaymentNoIssuer
-  ).map(r => r.opResultCode -> r).toMap
-
-  private val UTC: ZoneId = ZoneId.of("UTC")
+//  private val paymentResultByCode: Map[Int, PaymentResult] = Seq(
+//    PaymentSuccess, PaymentMalformed, PaymentUnderfunded, PaymentSourceNoTrust, PaymentSourceNotAuthorised,
+//    PaymentNoDestination, PaymentDestinationNoTrust, PaymentDestinationNotAuthorised, PaymentDestinationLineFull, PaymentNoIssuer
+//  ).map(r => r.opResultCode -> r).toMap
 
   private val paymentFields = (p: Payment) =>
     Some((
       p.id,
       p.scheduled.toInstant.toEpochMilli,
       p.submitted.map(_.toInstant.toEpochMilli),
-      p.source.accountId,
-      p.destination.accountId,
+      p.source.account,
+      p.destination.account,
       p.code,
       p.units / stroopsInLumen,
       p.status.name,
-      p.opResult
+      p.opResult,
+      p.sourceResolved.map(_.accountId),
+      p.destinationResolved.map(_.accountId)
     ))
 
   implicit val paymentWrites: Writes[Payment] = (
@@ -47,7 +47,9 @@ class PaymentsController @Inject()(cc: MessagesControllerComponents,
     (JsPath \ "asset").write[String] and
     (JsPath \ "units").write[Double] and
     (JsPath \ "status").write[String] and
-    (JsPath \ "result").writeNullable[String]
+    (JsPath \ "result").writeNullable[String] and
+    (JsPath \ "from_res").writeNullable[String] and
+    (JsPath \ "to_res").writeNullable[String]
     )(unlift(paymentFields))
 
   implicit val paymentsWrites: Writes[PaymentSubList] = (
@@ -77,13 +79,11 @@ class PaymentsController @Inject()(cc: MessagesControllerComponents,
     Ok(Json.toJson(PaymentSubList(payments, Some(count))))
   }
 
-  // todo - test
   def listScheduledBefore(id: Long): Action[AnyContent] = authenticatedUserAction { implicit req =>
     val payments = paymentRepo.scheduledBefore(id)
     Ok(Json.toJson(PaymentSubList(payments.reverse)))
   }
 
-  // todo - test
   def listScheduledAfter(id: Long): Action[AnyContent] = authenticatedUserAction { implicit req =>
     val payments = paymentRepo.scheduledAfter(id)
     Ok(Json.toJson(PaymentSubList(payments)))

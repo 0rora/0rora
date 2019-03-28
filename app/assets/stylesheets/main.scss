@@ -73,14 +73,6 @@ tr.payments-list-item {
   font-size: 0.8rem;
 }
 
-tr.payments-list-item.failed {
-  background-color: rgba(255, 35, 30, 0.22);
-}
-
-tr.payments-list-item.succeeded {
-  background-color: rgba(35, 255, 24, 0.22);
-}
-
 tr.payments-list-item td {
   max-width: 0;
   overflow: hidden;

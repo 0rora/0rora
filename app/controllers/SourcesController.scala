@@ -10,7 +10,7 @@ import javax.inject.Inject
 import kantan.csv.ops._
 import kantan.csv.{rfc, _}
 import models.repo.PaymentRepo
-import models.{Payment, PaymentProcessor}
+import models.{AccountIdLike, Payment, PaymentProcessor}
 import play.api.libs.Files
 import play.api.libs.json.Json
 import play.api.mvc._
@@ -38,8 +38,8 @@ class SourcesController @Inject()(cc: MessagesControllerComponents,
       Try {
         Payment(
           None,
-          KeyPair.fromAccountId(sender),
-          KeyPair.fromAccountId(destination),
+          AccountIdLike(sender),
+          AccountIdLike(destination),
           asset,
           issuer.map(KeyPair.fromAccountId),
           units,

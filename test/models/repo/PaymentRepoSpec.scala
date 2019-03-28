@@ -5,60 +5,70 @@ import java.time.{ZoneId, ZonedDateTime}
 import akka.Done
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
-import akka.stream.scaladsl.{Keep, Source}
+import akka.stream.scaladsl.Source
+import com.whisk.docker.impl.dockerjava.DockerKitDockerJava
+import com.whisk.docker.specs2.DockerTestKit
 import models.Generators._
 import models.Payment
 import org.scalacheck.Gen
+import org.specs2.concurrent.ExecutionEnv
 import org.specs2.mutable.Specification
-import org.specs2.specification.BeforeAfterAll
-import play.api.db.evolutions.{DatabaseEvolutions, Evolutions, ThisClassLoaderEvolutionsReader}
-import play.api.db.{Database, Databases}
+import play.api.db.Databases
+import play.api.db.evolutions.{DatabaseEvolutions, ThisClassLoaderEvolutionsReader}
 import scalikejdbc.ConnectionPool.DEFAULT_NAME
 import scalikejdbc._
 import scalikejdbc.specs2.mutable.AutoRollback
 
-import scala.annotation.tailrec
-import scala.concurrent.{Await, Future}
 import scala.concurrent.duration.Duration
+import scala.concurrent.{Await, Future}
 
-class PaymentRepoSpec extends Specification with BeforeAfterAll {
+class PaymentRepoSpec(ee: ExecutionEnv) extends Specification
+  with DockerTestKit with DockerKitDockerJava with DockerPostgresService {
 
   sequential
 
   private val UTC = ZoneId.of("UTC")
-  private var database: Option[Database] = None
   implicit val sys: ActorSystem = ActorSystem("PaymentRepoSpec")
   implicit val mat: ActorMaterializer = ActorMaterializer()
 
-  def beforeAll(): Unit = {
-    val db = Databases.inMemory(
+  override def beforeAll(): Unit = {
+    try {
+      startAllOrFail()
+    } catch {
+      case t: Throwable => t.printStackTrace()
+    }
+
+    val db = Databases(
+      driver = "org.postgresql.Driver",
+      url = s"jdbc:postgresql://127.0.0.1:$PostgresExposedPort/",
       name = "default",
-      urlOptions = Map("MODE" -> "PostgreSQL", "DATABASE_TO_UPPER" -> "FALSE"),
-      config = Map()
+      config = Map(
+        "username" -> PostgresUser,
+        "password" -> PostgresPassword,
+        "logStatements" -> true
+      )
     )
     val evolutions = new DatabaseEvolutions(db, "")
     val scripts = evolutions.scripts(ThisClassLoaderEvolutionsReader)
+
     evolutions.evolve(scripts, autocommit = true)
     ConnectionPool.add(DEFAULT_NAME, new DataSourceConnectionPool(db.dataSource))
-    database = Some(db)
-  }
-
-  def afterAll(): Unit = {
-    database.foreach(Evolutions.cleanupEvolutions(_))
-    database.foreach(_.shutdown())
   }
 
   private def repo()(implicit session: DBSession) = new PaymentRepo()
 
   class PaymentsState(ps: Seq[Payment]) extends AutoRollback {
+
     override def fixture(implicit session: DBSession): Unit = {
       val params = ps.map { p =>
-        Seq(p.source.accountId, p.destination.accountId, p.code, p.issuer.map(_.accountId).orNull, p.units,
-          p.received, p.scheduled, p.submitted.orNull, p.status.name, p.opResult.orNull)
+        Seq(p.source.account, p.destination.account, p.code, p.issuer.map(_.accountId).orNull, p.units,
+          p.received, p.scheduled, p.submitted.orNull, p.status.name, p.opResult.orNull,
+          p.sourceResolved.map(_.accountId).orNull, p.destinationResolved.map(_.accountId).orNull)
       }
       sql"""
-          insert into payments (source, destination, code, issuer, units, received, scheduled, submitted, status, op_result)
-          values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          insert into payments (source, destination, code, issuer, units, received, scheduled, submitted, status,
+                                op_result, source_resolved, destination_resolved)
+          values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """.batch(params: _*).apply()
     }
 
@@ -68,7 +78,10 @@ class PaymentRepoSpec extends Specification with BeforeAfterAll {
   "count of history payments" should {
     val ps = sample(1000, genPayment)
     "equal the qty of payments with status succeeded or failed" in new PaymentsState(ps) {
-      repo.countHistoric mustEqual ps.count(_.status == Payment.Succeeded) + ps.count(_.status == Payment.Failed)
+      repo.countHistoric mustEqual
+        ps.count(_.status == Payment.Succeeded) +
+          ps.count(_.status == Payment.Failed) +
+          ps.count(_.status == Payment.Invalid)
     }
   }
 
@@ -81,19 +94,24 @@ class PaymentRepoSpec extends Specification with BeforeAfterAll {
 
   "list of due payments" should {
     "return nothing if there is nothing" in new PaymentsState(Nil) {
-      repo.due(100) must beEmpty
+      repo.due must beEmpty
     }
 
     val psHistoric = sample(100, genHistoricPayment)
     "return nothing if there is nothing due" in new PaymentsState(psHistoric) {
-      repo.due(150) must beEmpty
+      repo.due must beEmpty
     }
 
     val psScheduled = sample(80, genScheduledPayment)
     "return only those payments which are pending" in new PaymentsState(psHistoric ++ psScheduled) {
-      repo.due(100).map(_.copy(id = None)) must containTheSameElementsAs(
-        psScheduled.filter(_.scheduled.isBefore(ZonedDateTime.now())).map(_.copy(id = None))
+      repo.due.toList.map(_.copy(id = None, submitted = None)) must containTheSameElementsAs(
+        psScheduled.filter(_.scheduled.isBefore(ZonedDateTime.now())).map(_.copy(id = None, status = Payment.Submitted))
       )
+    }
+
+    "work with autosession (inside play)" in {
+      implicit val session: DBSession = AutoSession
+      repo.due must beEmpty
     }
   }
 
@@ -137,13 +155,17 @@ class PaymentRepoSpec extends Specification with BeforeAfterAll {
     }
   }
 
-  "retrying payments" should {
-    val ps = sample(100, genSubmittedPayment)
-    "move the status to 'pending'" in new PaymentsState(ps) {
+  "invalidating a payment" should {
+    val ps = sample(3, genScheduledPayment)
+    "move the status to 'failed'" in new PaymentsState(ps) {
       val ids = fetchIds
-      repo.retry(ids.take(50))
-      val pendingIds = sql"""select id from payments where status='pending'""".map(_.int(1)).list().apply()
-      pendingIds mustEqual ids.take(50)
+      val now = ZonedDateTime.now
+      repo.invalidate(ids.head, now)
+      val idsAndDates = sql"select id, submitted from payments where status='invalid'".map { rs =>
+        rs.long("id") -> rs.timestampOpt("submitted").map(_.toInstant).map(ZonedDateTime.ofInstant(_, now.getZone))
+      }.list().apply()
+
+      idsAndDates mustEqual List(ids.head -> Some(now))
     }
   }
 
