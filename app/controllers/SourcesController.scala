@@ -18,7 +18,7 @@ import play.api.{Configuration, Logger}
 import stellar.sdk.KeyPair
 
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.util.Try
+import scala.util.{Failure, Success, Try}
 
 class SourcesController @Inject()(cc: MessagesControllerComponents,
                                   paymentRepo: PaymentRepo,
@@ -48,7 +48,12 @@ class SourcesController @Inject()(cc: MessagesControllerComponents,
           None,
           Payment.Pending
         )
-      }.toOption
+      } match {
+        case Success(p) => Some(p)
+        case Failure(t) =>
+          logger.debug("Unable to parse", t)
+          None
+      }
   }
 
   private def countingSink[T] = Sink.fold[Int, T](0)((acc, _) => acc + 1)
@@ -64,7 +69,7 @@ class SourcesController @Inject()(cc: MessagesControllerComponents,
       .toMat(paymentRepo.writer)(Keep.both)
       .run()
 
-    count.map{i =>
+    count.map { i =>
       paymentProcessor.checkForPayments()
       Ok(Json.obj("success" -> true, "count" -> i))
     }
