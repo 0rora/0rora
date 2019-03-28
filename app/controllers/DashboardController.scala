@@ -3,13 +3,12 @@ package controllers
 import controllers.actions.AuthenticatedUserAction
 import javax.inject.Inject
 import models.Global.SessionUsernameKey
-import play.api.mvc.{MessagesAbstractController, MessagesControllerComponents}
+import play.api.mvc.{Action, AnyContent, MessagesAbstractController, MessagesControllerComponents}
 
 class DashboardController @Inject()(cc: MessagesControllerComponents,
-                                    authenticatedUserAction: AuthenticatedUserAction
-                                      ) extends MessagesAbstractController(cc) {
+                                    authenticatedUserAction: AuthenticatedUserAction) extends MessagesAbstractController(cc) {
 
-  def dashboard() = authenticatedUserAction { implicit req =>
+  def dashboard(): Action[AnyContent] = authenticatedUserAction { implicit req =>
     val username = req.session(SessionUsernameKey)
     Ok(views.html.main(username))
   }

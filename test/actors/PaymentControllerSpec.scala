@@ -7,22 +7,20 @@ import akka.testkit.{ImplicitSender, TestKit, TestProbe}
 import models.Generators.{genScheduledPayment, sampleOf}
 import models.Payment.{Failed, Succeeded}
 import models.{AppConfig, RawAccountId, StubNetwork}
-import org.mockito.Mockito
 import org.scalacheck.Gen
 import org.scalatest.concurrent.Eventually
 import org.scalatest.mockito.MockitoSugar
 import org.scalatest.time.SpanSugar
 import org.scalatest.{BeforeAndAfterAll, Matchers, WordSpecLike}
-import org.specs2.matcher.Hamcrest
 import stellar.sdk.model.op.PaymentOperation
-import stellar.sdk.model.response.{AccountResponse, TransactionApproved, TransactionPostResponse, TransactionRejected}
+import stellar.sdk.model.response.{TransactionApproved, TransactionPostResponse, TransactionRejected}
 import stellar.sdk.model.result.TransactionResult.{BadSequenceNumber, InsufficientBalance, UnusedSignatures}
 import stellar.sdk.model.result._
-import stellar.sdk.model.{Account, NativeAmount, SignedTransaction, Thresholds}
+import stellar.sdk.model.{Account, NativeAmount}
 import stellar.sdk.util.ByteArrays
 import stellar.sdk.{InvalidAccountId, KeyPair, Network}
 
-import scala.concurrent.{Await, Future}
+import scala.concurrent.Await
 
 class PaymentControllerSpec extends TestKit(ActorSystem("payment-controller-spec")) with ImplicitSender
   with WordSpecLike with Matchers with BeforeAndAfterAll with MockitoSugar with Eventually with SpanSugar {

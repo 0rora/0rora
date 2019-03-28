@@ -11,7 +11,7 @@ import org.specs2.mock.Mockito
 import play.api.mvc.{BodyParsers, Flash, Session}
 import play.api.test.{FakeRequest, PlaySpecification}
 
-class LoggedInControllerSpec (implicit ec: ExecutionEnv) extends PlaySpecification with Results with Mockito with ScalaCheck {
+class LoggedInControllerSpec(implicit ec: ExecutionEnv) extends PlaySpecification with Results with Mockito with ScalaCheck {
 
   implicit val sys: ActorSystem = ActorSystem("UserControllerSpec")
   implicit val mat: ActorMaterializer = ActorMaterializer()

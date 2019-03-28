@@ -6,7 +6,7 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 - Support for Federated addresses in source and destination. [#6](https://github.com/0rora/0rora/issues/6)
-- Updated Stellar SDK to accommodate for changes in Horizon v0.17.0
+- Updated Stellar SDK to accommodate for changes in Horizon v0.17
 
 
 ## v0.1.1 - 2017-02-16
