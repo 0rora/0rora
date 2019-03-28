@@ -10,7 +10,7 @@ import play.api.mvc._
  * application's home page.
  */
 @Singleton
-class HomeController @Inject()(cc: MessagesControllerComponents, userRepo: UserRepo) extends MessagesAbstractController(cc) {
+class HomeController @Inject()(cc: MessagesControllerComponents) extends MessagesAbstractController(cc) {
 
   /**
    * Create an Action to render an HTML page.
@@ -19,7 +19,7 @@ class HomeController @Inject()(cc: MessagesControllerComponents, userRepo: UserR
    * will be called when the application receives a `GET` request with
    * a path of `/`.
    */
-  def login() = Action { implicit req =>
+  def login(): Action[AnyContent] = Action { implicit req =>
     Ok(views.html.login(UserController.form, routes.UserController.processLoginAttempt()))
   }
 }
