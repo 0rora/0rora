@@ -7,20 +7,22 @@ import akka.testkit.{ImplicitSender, TestKit, TestProbe}
 import models.Generators.{genScheduledPayment, sampleOf}
 import models.Payment.{Failed, Succeeded}
 import models.{AppConfig, RawAccountId, StubNetwork}
+import org.mockito.Mockito
 import org.scalacheck.Gen
 import org.scalatest.concurrent.Eventually
 import org.scalatest.mockito.MockitoSugar
 import org.scalatest.time.SpanSugar
 import org.scalatest.{BeforeAndAfterAll, Matchers, WordSpecLike}
+import org.specs2.matcher.Hamcrest
 import stellar.sdk.model.op.PaymentOperation
-import stellar.sdk.model.response.{TransactionApproved, TransactionPostResponse, TransactionRejected}
+import stellar.sdk.model.response.{AccountResponse, TransactionApproved, TransactionPostResponse, TransactionRejected}
 import stellar.sdk.model.result.TransactionResult.{BadSequenceNumber, InsufficientBalance, UnusedSignatures}
 import stellar.sdk.model.result._
-import stellar.sdk.model.{Account, NativeAmount}
+import stellar.sdk.model.{Account, NativeAmount, SignedTransaction, Thresholds}
 import stellar.sdk.util.ByteArrays
 import stellar.sdk.{InvalidAccountId, KeyPair, Network}
 
-import scala.concurrent.Await
+import scala.concurrent.{Await, Future}
 
 class PaymentControllerSpec extends TestKit(ActorSystem("payment-controller-spec")) with ImplicitSender
   with WordSpecLike with Matchers with BeforeAndAfterAll with MockitoSugar with Eventually with SpanSugar {
@@ -288,6 +290,23 @@ class PaymentControllerSpec extends TestKit(ActorSystem("payment-controller-spec
         destinationResolved = Some(KeyPair.fromAccountId(payment.destination.account))
       )), Failed, Some("UnusedSignatures")))
     }
+
+    "refresh the account if there is a failure" in {
+      val (payRepoProbe, accnRepoProbe, config) = setupForFailure
+      val payment = sampleOf(genScheduledPayment).copy(source = RawAccountId(config.accounts.head._1))
+
+      val actor = system.actorOf(Props(new PaymentController(payRepoProbe.ref, accnRepoProbe.ref, config)))
+      payRepoProbe.expectMsg(3.seconds, Subscribe(actor))
+      accnRepoProbe.expectMsg(3.seconds, Subscribe(actor))
+      accnRepoProbe.expectMsg(3.seconds, config.accounts.head._2.asPublicKey)
+      config.accounts.values.map(_.asPublicKey).map(Account(_, 123L)).foreach(actor ! UpdateAccount(_))
+
+      actor ! StreamInProgress(true)
+      actor ! payment
+      actor ! StreamInProgress(false)
+
+      accnRepoProbe.expectMsg(3.seconds, config.accounts.values.last.asPublicKey)
+    }
   }
 
   "payment controller state" must {
@@ -343,6 +362,14 @@ class PaymentControllerSpec extends TestKit(ActorSystem("payment-controller-spec
     }
   }
 
+  private def setupForFailure: (TestProbe, TestProbe, AppConfig) = {
+    val kp = KeyPair.random
+    val accns = Map(kp.accountId -> kp)
+    (TestProbe(), TestProbe(), new AppConfig {
+      override val network: Network = StubNetwork(fail = true)
+      override val accounts: Map[String, KeyPair] = accns
+    })
+  }
 
   private def setup(numAccounts: Int = 1, respondWith: Seq[TransactionPostResponse] = Seq(TransactionApproved("", 1, "", "", "")))
   : (TestProbe, TestProbe, AppConfig) = {
