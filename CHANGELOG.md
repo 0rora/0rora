@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 
 ## Next version
 
+Nothing, yet.
+
+## v0.1.2 - 2017-03-29
+
 ### Added
 - Support for Federated addresses in source and destination. [#6](https://github.com/0rora/0rora/issues/6)
 - Support for payments of non-native assets.
