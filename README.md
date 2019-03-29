@@ -96,7 +96,7 @@ Chat about 0rora in [Gitter](https://gitter.im/0rora/community).
 
 Help is warmly welcomed and pull requests in any area, big or small, are greatly appreciated.
 
-If 0rora has been helpful and you'd like to donate, the address is [![Donate](https://img.shields.io/keybase/xlm/jem.svg)](https://keybase.io/jem)
+If 0rora has been helpful and you'd like to donate, the address is [![Donate](https://img.shields.io/keybase/xlm/jem.svg)](https://stellar.expert/explorer/public/account/GBRAZP7U3SPHZ2FWOJLHPBO3XABZLKHNF6V5PUIJEEK6JEBKGXWD2IIE)
 
 
 
