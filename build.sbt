@@ -2,7 +2,7 @@ name := "0rora"
 organization := "io.github.0rora"
 maintainer := "keybase.io/jem"
 
-version := "0.1.2-SNAPSHOT"
+version := "0.1.2"
 
 lazy val root = (project in file(".")).enablePlugins(PlayScala)
 
