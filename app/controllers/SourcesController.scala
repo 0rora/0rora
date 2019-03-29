@@ -11,10 +11,10 @@ import kantan.csv.ops._
 import kantan.csv.{rfc, _}
 import models.repo.PaymentRepo
 import models.{AccountIdLike, Payment, PaymentProcessor}
+import play.api.Logger
 import play.api.libs.Files
 import play.api.libs.json.Json
 import play.api.mvc._
-import play.api.{Configuration, Logger}
 import stellar.sdk.KeyPair
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -48,12 +48,7 @@ class SourcesController @Inject()(cc: MessagesControllerComponents,
           None,
           Payment.Pending
         )
-      } match {
-        case Success(p) => Some(p)
-        case Failure(t) =>
-          logger.debug("Unable to parse", t)
-          None
-      }
+      }.toOption
   }
 
   private def countingSink[T] = Sink.fold[Int, T](0)((acc, _) => acc + 1)

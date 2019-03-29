@@ -1,6 +1,5 @@
-# 0rora
-
-_Stellar Payment Manager_
+# [0rora - Stellar Payment Manager](https://0rora.com/)
+by [Jem Mawson](https://keybase.io/jem)
 
 [![Travis](https://img.shields.io/travis/0rora/0rora.svg)](https://travis-ci.org/0rora/0rora)
 [![Coverage](https://img.shields.io/codecov/c/gh/0rora/0rora.svg)](https://codecov.io/gh/0rora/0rora)
@@ -8,13 +7,16 @@ _Stellar Payment Manager_
 [![Download](https://img.shields.io/github/downloads/0rora/0rora/v0.1.1/total.svg)](https://github.com/0rora/0rora/releases/tag/v0.1.1)
 [![Issues](https://img.shields.io/github/issues/0rora/0rora.svg)](https://github.com/0rora/0rora/issues)
 
-[![Donate](https://img.shields.io/keybase/xlm/jem.svg)](https://keybase.io/jem)
+0rora is a web application for easily making and scheduling Stellar payments in bulk. It makes use of payment channels
+and batching to achieve maximum throughput.
 
+With 0rora you can
+* schedule future payments;
+* distribute your custom tokens _en masse_; and
+* view reports of past and future payments.
 
-A self-hosted solution for easily making, scheduling, editing and responding to Stellar payments.
-
-The application currently supports only batch & scheduled payments via CSV upload. Full details are available in the 
-[changelog](CHANGELOG.md).
+You are free to copy, modify, and distribute 0rora with attribution under the terms of the MIT license.
+See the [license](https://github.com/0rora/0rora/blob/master/LICENSE.txt) for details.
 
 
 ## Installation
@@ -54,7 +56,6 @@ play.http.secret.key = "babelfish77"
 
 `bin/0rora -Dconfig.file=/path/to/production.conf`
 
-
 #### Properties
 
 - `0rora.horizon` determines the Horizon instance to connect with. It may be `test`, `public` or the base URL of any 
@@ -66,25 +67,36 @@ play.http.secret.key = "babelfish77"
 - `play.http.secret.key` the [application secret](https://www.playframework.com/documentation/2.7.x/ApplicationSecret)
 
 
-## Development
+## Documentation
 
-Please send pull requests and raise issues.
+See the [changelog](CHANGELOG.md) for details of features in the next and current releases.
 
-## License
-
-[MIT License](LICENSE.txt)
-
-## Changes
-
-[Changelog](CHANGELOG.md)
-
-## Credits
-
-[0rora](https://0rora.com/) is created and maintained by [Jem Mawson](https://keybase.io/jem).
-
-If you are using 0rora, or plan to, please get in touch. 
+Further detail on how to install and use 0rora is available under the `docs` folder.
 
 
+## Future Work
+
+0rora has many planned features on its road to being a fully-fledged Stellar payment manager and gateway. These include:
+
+* Receiving payments through event integration points, such as AMQP
+* Netting payments
+* Holding payments for manual validation
+* Account and channel management
+* User management and permissions
+
+Users of 0rora are encouraged to help prioritise future work.
+
+
+## Contributing
+
+Suggest new features, or raise bug reports in the [issuer tracker](https://github.com/0rora/0rora/issues).
+
+Chat about 0rora in [Gitter](https://gitter.im/0rora/community).
+
+Help is warmly welcomed and pull requests in any area, big or small, are greatly appreciated.
+
+Finally, if 0rora has been helpful and you'd like to donate, the address is
+[![Donate](https://img.shields.io/keybase/xlm/jem.svg)](https://keybase.io/jem)
 
 
 
