@@ -7,21 +7,21 @@ by [Jem Mawson](https://keybase.io/jem)
 [![Download](https://img.shields.io/github/downloads/0rora/0rora/v0.1.1/total.svg)](https://github.com/0rora/0rora/releases/tag/v0.1.1)
 [![Issues](https://img.shields.io/github/issues/0rora/0rora.svg)](https://github.com/0rora/0rora/issues)
 
-0rora is a web application for easily making and scheduling Stellar payments in bulk. It makes use of payment channels
-and batching to achieve maximum throughput.
+0rora is a web application for easily making and scheduling Stellar payments in bulk.
 
-With 0rora you can
+With 0rora you can:
 * schedule future payments;
 * distribute your custom tokens _en masse_; and
 * view reports of past and future payments.
 
-You are free to copy, modify, and distribute 0rora with attribution under the terms of the MIT license.
-See the [license](https://github.com/0rora/0rora/blob/master/LICENSE.txt) for details.
+0rora makes use of payment channels and batching to achieve maximum throughput, so you get the fastest performance possible.
+
+You are free to copy, modify, and distribute 0rora with attribution under the terms of the [MIT license](LICENSE.txt).
 
 
 ## Installation
 
-1. Unzip the distribution to your preferred path.
+1. Unzip the latest [distribution](https://github.com/0rora/0rora/releases) to your preferred path.
 2. Configure your instance.
 
 ### Configuration
@@ -64,7 +64,7 @@ play.http.secret.key = "babelfish77"
     (Future builds will migrate this sensitive data elsewhere).
 - `db.default` is the JDBC configuration of the application database as per the [ScalikeJDBC documentation](http://scalikejdbc.org/documentation/configuration.html#scalikejdbc-config).
     At the very least, you will require `db.default.driver` and `db.default.url`.
-- `play.http.secret.key` the [application secret](https://www.playframework.com/documentation/2.7.x/ApplicationSecret)
+- `play.http.secret.key` is the [application secret](https://www.playframework.com/documentation/2.7.x/ApplicationSecret).
 
 
 ## Documentation
@@ -84,7 +84,8 @@ Further detail on how to install and use 0rora is available under the `docs` fol
 * Account and channel management
 * User management and permissions
 
-Users of 0rora are encouraged to help prioritise future work.
+Users of 0rora are encouraged to help prioritise future work. Contact the project via
+[chat](https://gitter.im/0rora/community) or [github](https://github.com/0rora/0rora/issues).
 
 
 ## Contributing
@@ -95,8 +96,7 @@ Chat about 0rora in [Gitter](https://gitter.im/0rora/community).
 
 Help is warmly welcomed and pull requests in any area, big or small, are greatly appreciated.
 
-Finally, if 0rora has been helpful and you'd like to donate, the address is
-[![Donate](https://img.shields.io/keybase/xlm/jem.svg)](https://keybase.io/jem)
+If 0rora has been helpful and you'd like to donate, the address is [![Donate](https://img.shields.io/keybase/xlm/jem.svg)](https://keybase.io/jem)
 
 
 
