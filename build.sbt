@@ -36,14 +36,3 @@ scalacOptions ++= Seq(
   "-target:jvm-1.8")
 
 coverageExcludedPackages := "controllers\\.javascript;router;views.html;controllers\\.Reverse.*"
-
-//dockerfile in docker := {
-//  val appDir: File = stage.value
-//  val targetDir = "/app"
-//
-//  new Dockerfile {
-//    from("openjdk:8-jre")
-//    entryPoint(s"$targetDir/bin/${executableScriptName.value}")
-//    copy(appDir, targetDir, chown = "daemon:daemon")
-//  }
-//}

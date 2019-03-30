@@ -9,3 +9,5 @@ dockerCommands := Seq(
   Cmd("EXPOSE", "9000"),
   ExecCmd("ENTRYPOINT", "/opt/docker/bin/0rora")
 )
+
+dockerUsername := Some("synesso")

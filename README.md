@@ -21,51 +21,30 @@ You are free to copy, modify, and distribute 0rora with attribution under the te
 
 ## Installation
 
-1. Unzip the latest [distribution](https://github.com/0rora/0rora/releases) to your preferred path.
-2. Configure your instance.
+1. Create an empty Postgres Database.
+2. Run the 0rora [docker image](https://cloud.docker.com/repository/docker/synesso/0rora), passing environment values
+    for your database.
 
-### Configuration
-
-Create a `production.conf` override file specific for your site, e.g.
-
-```hocon
-include "application"
-
-0rora {
-  horizon = "test"
-  accounts = [
-    "SCTQSBBI7SULSIFMHWIOHPKEMN6JLHZRNUKIUZSN2XYPU4CCCQMGGGCS",
-    "SCVD5GCA3RTIFPDN2RBVLXZGUNTUP7NQN4EYORJPWDXPSQ7EEHNDJUKN",
-    "SA4OT2TPC2XPGOCXHNJP6N2LQIGM4WZE63IIEATA4N5GM6WY2Z6GLSLQ"
-  ]
-}
-
-db {
-  default {
-    driver = org.postgresql.Driver
-    url = "jdbc:postgresql://localhost/orora"
-    username = "ford"
-    password = "pr3fekt"
-  }
-}
-
-play.http.secret.key = "babelfish77"
+```bash
+docker run -p 9000:9000 \
+    -e HORIZON="test" \
+    -e PG_URL="jdbc:postgresql://host:port/db" \
+    -e PG_USERNAME="ford" \
+    -e PG_PASSWORD="pr3fekt" \
+    -e APPLICATION_SECRET=... \
+    synesso/0rora:latest
 ```
 
-... and to pass that file as a system property at initialisation:
 
-`bin/0rora -Dconfig.file=/path/to/production.conf`
-
-#### Properties
-
-- `0rora.horizon` determines the Horizon instance to connect with. It may be `test`, `public` or the base URL of any 
+- `HORIZON` determines the Horizon instance to connect with. It may be `"test"`, `"public"` or the base URL of any 
     custom Horizon instance. 
-- `0rora.accounts` is an array of secret seeds for accounts that will be both payers and payment channel participants.
-    (Future builds will migrate this sensitive data elsewhere).
-- `db.default` is the JDBC configuration of the application database as per the [ScalikeJDBC documentation](http://scalikejdbc.org/documentation/configuration.html#scalikejdbc-config).
-    At the very least, you will require `db.default.driver` and `db.default.url`.
-- `play.http.secret.key` is the [application secret](https://www.playframework.com/documentation/2.7.x/ApplicationSecret).
-
+- `PG_URL` is the [JDBC URL](https://jdbc.postgresql.org/documentation/80/connect.html) of your database.
+- `PG_USERNAME` is username for your database.
+- `PG_PASSWORD` is password for your database.
+- `APPLICATION_SECRET` is a random, 32-byte minimum value for managing session cookies and CSRF tokens. See 
+    PlayFramework documentation on the [application secret](https://www.playframework.com/documentation/2.7.x/ApplicationSecret)
+    for more detail. 
+    
 
 ## Documentation
 
