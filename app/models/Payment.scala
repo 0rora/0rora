@@ -40,24 +40,24 @@ object Payment {
     case _ => throw new Exception(s"Payment status unrecognised: $s")
   }
 
-  /**
-    * State transition for payments:
-    *
-    * +-----------+   +-----------+
-    * |  pending  +--->  invalid  |
-    * +-----+-----+   +-----------+
-    *       |
-    *       |
-    * +-----v-----+   +-----------+
-    * | submitted +--->  failed   |
-    * +-----+-----+   +-----------+
-    *       |
-    *       |
-    * +-----v-----+
-    * | succeeded |
-    * +-----------+
-    *
-    */
+  /*
+   * State transition for payments:
+   *
+   * +-----------+   +-----------+
+   * |  pending  +--->  invalid  |
+   * +-----+-----+   +-----------+
+   *       |
+   *       |
+   * +-----v-----+   +-----------+
+   * | submitted +--->  failed   |
+   * +-----+-----+   +-----------+
+   *       |
+   *       |
+   * +-----v-----+
+   * | succeeded |
+   * +-----------+
+   *
+   */
   sealed trait Status {
     val name: String = getClass.getSimpleName.toLowerCase().replace("$", "")
   }

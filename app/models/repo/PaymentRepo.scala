@@ -107,7 +107,7 @@ class PaymentRepo @Inject()()(implicit val session: DBSession) {
   /**
     * The payments that have previously been processed by the network, ordered from most recent to earlier.
     * @param limit limit the quantity of results
-    * @return list of 0 {@literal $}limit payments
+    * @return list of 0 to $$limit payments
     */
   def history(limit: Int = 100): Seq[Payment] = {
     sql"""
@@ -124,7 +124,7 @@ class PaymentRepo @Inject()()(implicit val session: DBSession) {
     * ordered from most recent to earlier.
     * @param id only show the payments preceding this id.
     * @param limit limit the quantity of results
-    * @return list of 0 {@literal $}limit payments
+    * @return list of 0 to $$limit payments
     */
   def historyBefore(id: Long, limit: Int = 100): Seq[Payment] = {
     sql"""
@@ -146,7 +146,7 @@ class PaymentRepo @Inject()()(implicit val session: DBSession) {
     * ordered from the earliest to most recent.
     * @param id only show the payments succeeding this id
     * @param limit limit the quantity of results
-    * @return list of 0 {@literal $}limit payments
+    * @return list of 0 to $$limit payments
     */
   def historyAfter(id: Long, limit: Int = 100): Seq[Payment] = {
     sql"""
@@ -165,7 +165,7 @@ class PaymentRepo @Inject()()(implicit val session: DBSession) {
   /**
     * The payments that yet to be processed by the network, ordered from next due to latest due.
     * @param limit limit the quantity of results
-    * @return list of 0 {@literal $}limit payments
+    * @return list of 0 to $$limit payments
     */
   def scheduled(limit: Int = 100): Seq[Payment] = {
     sql"""
@@ -181,7 +181,7 @@ class PaymentRepo @Inject()()(implicit val session: DBSession) {
     * The payments that yet to be processed by the network, ordered from next due to latest due, prior to the given id.
     * @param id only return payments prior to the scheduled date of the given id (or the same date, by lower id).
     * @param limit limit the quantity of results
-    * @return list of 0 {@literal $}limit payments
+    * @return list of 0 to $$limit payments
     */
   def scheduledBefore(id: Long, limit: Int = 100): Seq[Payment] = {
     sql"""
@@ -201,7 +201,7 @@ class PaymentRepo @Inject()()(implicit val session: DBSession) {
     * The payments that yet to be processed by the network, ordered from next due to latest due, after to the given id.
     * @param id only return payments after the scheduled date of the given id (or the same date, by higher id).
     * @param limit limit the quantity of results
-    * @return list of 0 {@literal $}limit payments
+    * @return list of 0 to $$limit payments
     */
   def scheduledAfter(id: Long, limit: Int = 100): Seq[Payment] = {
     sql"""
