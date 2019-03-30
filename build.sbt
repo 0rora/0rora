@@ -2,9 +2,7 @@ name := "0rora"
 organization := "io.github.0rora"
 maintainer := "keybase.io/jem"
 
-version := "0.1.2"
-
-lazy val root = (project in file(".")).enablePlugins(PlayScala)
+lazy val root = (project in file(".")).enablePlugins(PlayScala, DockerPlugin, GitVersioning)
 
 scalaVersion := "2.12.8"
 
@@ -38,3 +36,14 @@ scalacOptions ++= Seq(
   "-target:jvm-1.8")
 
 coverageExcludedPackages := "controllers\\.javascript;router;views.html;controllers\\.Reverse.*"
+
+//dockerfile in docker := {
+//  val appDir: File = stage.value
+//  val targetDir = "/app"
+//
+//  new Dockerfile {
+//    from("openjdk:8-jre")
+//    entryPoint(s"$targetDir/bin/${executableScriptName.value}")
+//    copy(appDir, targetDir, chown = "daemon:daemon")
+//  }
+//}
