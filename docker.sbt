@@ -11,3 +11,4 @@ dockerCommands := Seq(
 )
 
 dockerUsername := Some("synesso")
+dockerUpdateLatest := true
