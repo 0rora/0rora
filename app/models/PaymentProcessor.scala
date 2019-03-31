@@ -27,11 +27,3 @@ class PaymentProcessor @Inject()(repo: PaymentRepo,
 
   def checkForPayments(): Unit = payRepo ! Poll
 }
-
-class PaymentProcessorModule extends Module {
-  def bindings(env: Environment, config: Configuration): Seq[Binding[_]] =
-    Seq(
-      bind[PaymentProcessor].toSelf.eagerly(),
-      bind[DBSession].to(AutoSession)
-    )
-}

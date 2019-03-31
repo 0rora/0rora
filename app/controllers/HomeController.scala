@@ -1,8 +1,10 @@
 package controllers
 
 import javax.inject._
-import models.repo.UserRepo
-import play.api.Configuration
+import org.pac4j.core.profile.CommonProfile
+import org.pac4j.http.client.indirect.FormClient
+import org.pac4j.play.scala.{Security, SecurityComponents}
+import play.api.http.HttpVerbs._
 import play.api.mvc._
 
 /**
@@ -10,17 +12,12 @@ import play.api.mvc._
  * application's home page.
  */
 @Singleton
-class HomeController @Inject()(cc: MessagesControllerComponents) extends MessagesAbstractController(cc) {
+class HomeController @Inject()(val controllerComponents: SecurityComponents) extends Security[CommonProfile] {
 
-  /**
-   * Create an Action to render an HTML page.
-   *
-   * The configuration in the `routes` file means that this method
-   * will be called when the application receives a `GET` request with
-   * a path of `/`.
-   */
   def login(): Action[AnyContent] = Action { implicit req =>
-    Ok(views.html.login(UserController.form, routes.UserController.processLoginAttempt()))
+    val formClient = config.getClients.findClient("FormClient").asInstanceOf[FormClient]
+    val call = Call(GET, formClient.getCallbackUrl)
+    Ok(views.html.login(call))
   }
 }
 

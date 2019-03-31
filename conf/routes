@@ -4,8 +4,7 @@
 # ~~~~
 
 # Primary content
-GET         /                         controllers.HomeController.login
-GET         /dashboard                controllers.DashboardController.dashboard
+GET         /                         controllers.DashboardController.dashboard
 
 # Sources
 POST        /sources/csv              controllers.SourcesController.uploadCSV
@@ -20,8 +19,10 @@ GET         /payments/scheduledAfter  controllers.PaymentsController.listSchedul
 GET         /payments/scheduledBefore controllers.PaymentsController.listScheduledBefore(id: Long)
 
 # Authentication
-GET         /logout                   controllers.LoggedInController.logout
-POST        /doLogin                  controllers.UserController.processLoginAttempt
+GET         /login                    controllers.HomeController.login()
+GET         /logout                   @org.pac4j.play.LogoutController.logout()
+GET         /callback                 @org.pac4j.play.CallbackController.callback()
+POST        /callback                 @org.pac4j.play.CallbackController.callback()
 
 # Map static resources from the /public folder to the /assets URL path
 GET         /assets/*file             controllers.Assets.versioned(path="/public", file: Asset)

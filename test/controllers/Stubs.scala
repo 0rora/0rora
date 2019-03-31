@@ -1,7 +1,5 @@
 package controllers
 
-import controllers.actions.AuthenticatedUserAction
-import play.api.libs.streams.Accumulator
 import play.api.mvc._
 import play.api.test.Helpers
 

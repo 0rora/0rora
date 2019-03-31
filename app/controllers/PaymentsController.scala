@@ -1,27 +1,20 @@
 package controllers
 
-import java.time.ZoneId
-
-import controllers.actions.AuthenticatedUserAction
 import javax.inject._
 import models.Payment
 import models.repo.PaymentRepo
+import org.pac4j.core.profile.CommonProfile
+import org.pac4j.play.scala.{Security, SecurityComponents}
 import play.api.libs.functional.syntax._
 import play.api.libs.json.{JsPath, Json, Writes}
-import play.api.mvc.{Action, AnyContent, MessagesAbstractController, MessagesControllerComponents}
-import stellar.sdk.model.result._
+import play.api.mvc._
 
 @Singleton
-class PaymentsController @Inject()(cc: MessagesControllerComponents,
-                                   authenticatedUserAction: AuthenticatedUserAction,
-                                   paymentRepo: PaymentRepo) extends MessagesAbstractController(cc) {
+class PaymentsController @Inject()(val controllerComponents: SecurityComponents,
+                                   paymentRepo: PaymentRepo) extends BaseController with Security[CommonProfile] {
+
 
   private val stroopsInLumen = 10000000.0
-
-//  private val paymentResultByCode: Map[Int, PaymentResult] = Seq(
-//    PaymentSuccess, PaymentMalformed, PaymentUnderfunded, PaymentSourceNoTrust, PaymentSourceNotAuthorised,
-//    PaymentNoDestination, PaymentDestinationNoTrust, PaymentDestinationNotAuthorised, PaymentDestinationLineFull, PaymentNoIssuer
-//  ).map(r => r.opResultCode -> r).toMap
 
   private val paymentFields = (p: Payment) =>
     Some((
@@ -57,34 +50,34 @@ class PaymentsController @Inject()(cc: MessagesControllerComponents,
     (JsPath \ "total").write[Option[Int]]
   )(unlift(PaymentSubList.unapply))
 
-  def listHistory(): Action[AnyContent] = authenticatedUserAction { implicit req =>
+  def listHistory(): Action[AnyContent] = Secure("FormClient") { implicit req =>
     val payments = paymentRepo.history()
     val count = paymentRepo.countHistoric
     Ok(Json.toJson(PaymentSubList(payments, Some(count))))
   }
 
-  def listHistoryBefore(id: Long): Action[AnyContent] = authenticatedUserAction { implicit req =>
+  def listHistoryBefore(id: Long): Action[AnyContent] = Secure("FormClient") { implicit req =>
     val payments = paymentRepo.historyBefore(id)
     Ok(Json.toJson(PaymentSubList(payments)))
   }
 
-  def listHistoryAfter(id: Long): Action[AnyContent] = authenticatedUserAction { implicit req =>
+  def listHistoryAfter(id: Long): Action[AnyContent] = Secure("FormClient") { implicit req =>
     val payments = paymentRepo.historyAfter(id)
     Ok(Json.toJson(PaymentSubList(payments.reverse)))
   }
 
-  def listScheduled(): Action[AnyContent] = authenticatedUserAction { implicit req =>
+  def listScheduled(): Action[AnyContent] = Secure("FormClient") { implicit req =>
     val payments = paymentRepo.scheduled()
     val count = paymentRepo.countScheduled
     Ok(Json.toJson(PaymentSubList(payments, Some(count))))
   }
 
-  def listScheduledBefore(id: Long): Action[AnyContent] = authenticatedUserAction { implicit req =>
+  def listScheduledBefore(id: Long): Action[AnyContent] = Secure("FormClient") { implicit req =>
     val payments = paymentRepo.scheduledBefore(id)
     Ok(Json.toJson(PaymentSubList(payments.reverse)))
   }
 
-  def listScheduledAfter(id: Long): Action[AnyContent] = authenticatedUserAction { implicit req =>
+  def listScheduledAfter(id: Long): Action[AnyContent] = Secure("FormClient") { implicit req =>
     val payments = paymentRepo.scheduledAfter(id)
     Ok(Json.toJson(PaymentSubList(payments)))
   }
