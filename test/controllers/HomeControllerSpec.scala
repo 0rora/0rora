@@ -16,13 +16,10 @@ class HomeControllerSpec(implicit ec: ExecutionEnv) extends PlaySpecification wi
 
   "the home page" should {
     "display login form" >> {
-/*
-      val controller = new HomeController(Stubs.stubMessagesControllerComponents())
+      val controller = new HomeController(Stubs.stubSecurityComponents(loggedIn = false))
       val result = controller.login().apply(FakeRequest().withCSRFToken)
       contentAsString(result) must contain("login-form")
       status(result) mustEqual 200
-*/
-      pending
     }
   }
 

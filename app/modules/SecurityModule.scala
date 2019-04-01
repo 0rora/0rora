@@ -13,7 +13,7 @@ import org.pac4j.http.client.indirect.FormClient
 import org.pac4j.play.LogoutController
 import org.pac4j.play.http.PlayHttpActionAdapter
 import org.pac4j.play.scala.{DefaultSecurityComponents, Pac4jScalaTemplateHelper, SecurityComponents}
-import org.pac4j.play.store.{PlayCookieSessionStore, PlaySessionStore, ShiroAesDataEncrypter}
+import org.pac4j.play.store.{DataEncrypter, PlayCookieSessionStore, PlaySessionStore, ShiroAesDataEncrypter}
 import org.pac4j.sql.profile.DbProfile
 import org.pac4j.sql.profile.service.DbProfileService
 import play.api.{Configuration, Environment}
@@ -21,11 +21,7 @@ import play.api.{Configuration, Environment}
 class SecurityModule(environment: Environment, configuration: Configuration) extends AbstractModule {
 
   override def configure(): Unit = {
-    val secretKey = configuration.get[String]("play.http.secret.key")
-    if (secretKey.length < 16) throw InvalidConfig("Value for play.http.secret.key is too short. Must be at least 16 characters.")
-    val sKey = secretKey.take(16)
-    val dataEncrypter = new ShiroAesDataEncrypter(sKey)
-    val playSessionStore = new PlayCookieSessionStore(dataEncrypter)
+    val playSessionStore = new PlayCookieSessionStore(provideEncrypter)
 
     bind(classOf[PlaySessionStore]).toInstance(playSessionStore)
     bind(classOf[SecurityComponents]).to(classOf[DefaultSecurityComponents])
@@ -43,6 +39,14 @@ class SecurityModule(environment: Environment, configuration: Configuration) ext
       p.addAttribute(Pac4jConstants.USERNAME, "admin")
       authenticator.create(p, "admin")
     }
+  }
+
+  @Provides
+  def provideEncrypter: DataEncrypter = {
+    val secretKey = configuration.get[String]("play.http.secret.key")
+    if (secretKey.length < 16) throw InvalidConfig("Value for play.http.secret.key is too short. Must be at least 16 characters.")
+    val sKey = secretKey.take(16)
+    new ShiroAesDataEncrypter(sKey)
   }
 
   @Provides

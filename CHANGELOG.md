@@ -4,7 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## Next version
 
-Nothing, yet.
+### Added
+- Database-backed user authentication. The default user is `admin:admin`. [#8](https://github.com/0rora/0rora/issues/8) 
+
 
 ## v0.1.2 - 2017-03-29
 
