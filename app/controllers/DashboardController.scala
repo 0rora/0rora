@@ -1,15 +1,15 @@
 package controllers
 
-import controllers.actions.AuthenticatedUserAction
 import javax.inject.Inject
-import models.Global.SessionUsernameKey
-import play.api.mvc.{Action, AnyContent, MessagesAbstractController, MessagesControllerComponents}
+import org.pac4j.core.profile.CommonProfile
+import org.pac4j.play.scala.{Security, SecurityComponents}
+import play.api.mvc._
 
-class DashboardController @Inject()(cc: MessagesControllerComponents,
-                                    authenticatedUserAction: AuthenticatedUserAction) extends MessagesAbstractController(cc) {
+class DashboardController @Inject()(val controllerComponents: SecurityComponents)
+  extends BaseController with Security[CommonProfile] {
 
-  def dashboard(): Action[AnyContent] = authenticatedUserAction { implicit req =>
-    val username = req.session(SessionUsernameKey)
-    Ok(views.html.main(username))
+  def dashboard(): Action[AnyContent] = Secure("FormClient") { implicit req =>
+    val profile: CommonProfile = profiles(req).head
+    Ok(views.html.main(profile.getUsername))
   }
 }

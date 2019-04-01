@@ -2,7 +2,7 @@ package models
 
 import java.net.URI
 
-import com.google.inject.ImplementedBy
+import com.google.inject.{ImplementedBy, Provides}
 import javax.inject.{Inject, Singleton}
 import play.api.Configuration
 import stellar.sdk.{KeyPair, Network, PublicNetwork, StandaloneNetwork, TestNetwork}
@@ -34,4 +34,12 @@ class FileAppConfig @Inject()(val conf: Configuration) extends AppConfig {
 
 }
 
-case class InvalidConfig(msg: String, t: Throwable) extends RuntimeException(msg, t)
+case class InvalidConfig(msg: String) extends RuntimeException(msg)
+
+object InvalidConfig {
+  def apply(msg: String, cause: Throwable): InvalidConfig = {
+    val ic = InvalidConfig(msg)
+    ic.initCause(cause)
+    ic
+  }
+}

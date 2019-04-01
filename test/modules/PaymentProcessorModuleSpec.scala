@@ -1,5 +1,6 @@
-package models
+package modules
 
+import models.PaymentProcessor
 import org.specs2.mutable.Specification
 import play.api.inject.{Binding, BindingKey, BindingTarget, ProviderTarget}
 import play.api.{Configuration, Environment}

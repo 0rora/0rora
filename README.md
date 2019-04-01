@@ -4,7 +4,6 @@ by [Jem Mawson](https://keybase.io/jem)
 [![Travis](https://img.shields.io/travis/0rora/0rora.svg)](https://travis-ci.org/0rora/0rora)
 [![Coverage](https://img.shields.io/codecov/c/gh/0rora/0rora.svg)](https://codecov.io/gh/0rora/0rora)
 [![Chat](https://img.shields.io/gitter/room/0rora/community.svg)](https://gitter.im/0rora/community?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
-[![Download](https://img.shields.io/github/downloads/0rora/0rora/v0.1.1/total.svg)](https://github.com/0rora/0rora/releases/tag/v0.1.1)
 [![Issues](https://img.shields.io/github/issues/0rora/0rora.svg)](https://github.com/0rora/0rora/issues)
 
 0rora is a web application for easily making and scheduling Stellar payments in bulk.

@@ -1,4 +1,4 @@
-@(form: Form[models.User], postUrl: Call)(implicit request: MessagesRequestHeader, flash: Flash)
+@(postUrl: Call)(implicit flash: Flash)
 
 <!DOCTYPE html>
 <html lang="en">
@@ -24,13 +24,11 @@
         <script>mdc.autoInit()</script>
 
         <section class="header">
-            <img src="@routes.Assets.versioned("images/login_carrot.jpg")" class="logo"/>
+            <img src="@routes.Assets.versioned("images/login_carrot.jpg")" class="logo" alt="login image: rabbit in a carrot spaceship"/>
             <h1>0RORA</h1>
         </section>
 
         @helper.form(postUrl, 'id -> "login-form") {
-            @helper.CSRF.formField
-
             <div class="mdc-text-field mdc-text-field--box username">
                 <input type="text" class="mdc-text-field__input" id="username-input" name="username">
                 <label class="mdc-floating-label" for="username-input">Username</label>
