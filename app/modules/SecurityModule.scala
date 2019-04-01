@@ -1,17 +1,21 @@
 package modules
 
 import com.google.inject.{AbstractModule, Provides}
+import com.zaxxer.hikari.HikariDataSource
 import models.InvalidConfig
+import org.apache.shiro.authc.credential.DefaultPasswordService
 import org.pac4j.core.client.Clients
 import org.pac4j.core.config.Config
+import org.pac4j.core.context.Pac4jConstants
+import org.pac4j.core.credentials.password.ShiroPasswordEncoder
 import org.pac4j.core.profile.CommonProfile
-import org.pac4j.http.client.direct.DirectFormClient
 import org.pac4j.http.client.indirect.FormClient
-import org.pac4j.http.credentials.authenticator.test.SimpleTestUsernamePasswordAuthenticator
+import org.pac4j.play.LogoutController
 import org.pac4j.play.http.PlayHttpActionAdapter
 import org.pac4j.play.scala.{DefaultSecurityComponents, Pac4jScalaTemplateHelper, SecurityComponents}
 import org.pac4j.play.store.{PlayCookieSessionStore, PlaySessionStore, ShiroAesDataEncrypter}
-import org.pac4j.play.{CallbackController, LogoutController}
+import org.pac4j.sql.profile.DbProfile
+import org.pac4j.sql.profile.service.DbProfileService
 import play.api.{Configuration, Environment}
 
 class SecurityModule(environment: Environment, configuration: Configuration) extends AbstractModule {
@@ -31,12 +35,30 @@ class SecurityModule(environment: Environment, configuration: Configuration) ext
     val logoutController = new LogoutController()
     logoutController.setDefaultUrl("/")
     bind(classOf[LogoutController]).toInstance(logoutController)
+
+    val authenticator = provideAuthenticator
+    if (Option(authenticator.findById("admin")).isEmpty) {
+      val p = new DbProfile()
+      p.setId("admin")
+      p.addAttribute(Pac4jConstants.USERNAME, "admin")
+      authenticator.create(p, "admin")
+    }
+  }
+
+  @Provides
+  def provideAuthenticator: DbProfileService = {
+    val ds = new HikariDataSource()
+    ds.setJdbcUrl(configuration.get[String]("db.default.url"))
+    ds.setUsername(configuration.get[String]("db.default.username"))
+    ds.setPassword(configuration.get[String]("db.default.password"))
+    val passwordEncoder = new ShiroPasswordEncoder(new DefaultPasswordService)
+    new DbProfileService(ds, passwordEncoder)
   }
 
   @Provides
   def provideFormClient: FormClient = {
-    val authenticator_REPLACE_ME = new SimpleTestUsernamePasswordAuthenticator()
-    new FormClient("/login", authenticator_REPLACE_ME)
+    val authenticator = provideAuthenticator
+    new FormClient("/login", authenticator)
   }
 
   @Provides
