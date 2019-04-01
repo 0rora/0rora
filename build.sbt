@@ -40,6 +40,7 @@ libraryDependencies ++= Seq(
   "org.scalatestplus.play" %% "scalatestplus-play" % "4.0.0" % Test,
   "com.whisk" %% "docker-testkit-specs2" % "0.9.8" % Test,
   "com.whisk" %% "docker-testkit-impl-docker-java" % "0.9.8" % Test,
+  "com.h2database" % "h2" % "1.4.192" % Test,
 )
 
 scalacOptions ++= Seq(
