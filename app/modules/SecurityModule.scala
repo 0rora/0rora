@@ -6,6 +6,7 @@ import models.InvalidConfig
 import org.apache.shiro.authc.credential.DefaultPasswordService
 import org.pac4j.core.client.Clients
 import org.pac4j.core.config.Config
+import org.pac4j.core.context.Pac4jConstants
 import org.pac4j.core.credentials.password.ShiroPasswordEncoder
 import org.pac4j.core.profile.CommonProfile
 import org.pac4j.http.client.indirect.FormClient
@@ -13,6 +14,7 @@ import org.pac4j.play.LogoutController
 import org.pac4j.play.http.PlayHttpActionAdapter
 import org.pac4j.play.scala.{DefaultSecurityComponents, Pac4jScalaTemplateHelper, SecurityComponents}
 import org.pac4j.play.store.{DataEncrypter, PlayCookieSessionStore, PlaySessionStore, ShiroAesDataEncrypter}
+import org.pac4j.sql.profile.DbProfile
 import org.pac4j.sql.profile.service.DbProfileService
 import play.api.{Configuration, Environment}
 
@@ -30,6 +32,15 @@ class SecurityModule(environment: Environment, configuration: Configuration) ext
     val logoutController = new LogoutController()
     logoutController.setDefaultUrl("/")
     bind(classOf[LogoutController]).toInstance(logoutController)
+
+    // todo - Creation of first user is to be handled differently.
+    val authenticator = provideAuthenticator
+    if (Option(authenticator.findById("admin")).isEmpty) {
+      val p = new DbProfile()
+      p.setId("admin")
+      p.addAttribute(Pac4jConstants.USERNAME, "admin")
+      authenticator.create(p, "admin")
+    }
   }
   // $COVERAGE-ON$
 

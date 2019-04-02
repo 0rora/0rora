@@ -254,6 +254,17 @@ function hashChanged(e) {
     switchDashboardFocusTo(window.location.hash.substr(1));
 }
 
+function enableModalToggles() {
+    $('.fa-butt > a').click(function (e) {
+        let onElement = e.currentTarget.attributes['aria-controls'].value;
+        $('#' + onElement).addClass('is-active');
+    });
+}
+
+function dismiss(modal) {
+    $('#' + modal).removeClass('is-active');
+}
+
 let originalOnload = window.onload;
 window.onload = function() {
     if (originalOnload) {
@@ -264,6 +275,7 @@ window.onload = function() {
     // topAppBar();
     // drawer();
     enableFileDragAndDrop();
+    enableModalToggles();
     if ($('#login-form').length === 0) {
         window.onhashchange = hashChanged;
         window.location.hash = "#payments-history";

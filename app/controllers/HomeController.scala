@@ -18,14 +18,6 @@ import play.api.mvc._
 class HomeController @Inject()(val controllerComponents: SecurityComponents,
                                authenticator: DbProfileService) extends Security[CommonProfile] {
 
-  // todo - Creation of first user is to be handled differently.
-  if (Option(authenticator.findById("admin")).isEmpty) {
-    val p = new DbProfile()
-    p.setId("admin")
-    p.addAttribute(Pac4jConstants.USERNAME, "admin")
-    authenticator.create(p, "admin")
-  }
-
   def login(): Action[AnyContent] = Action { implicit req =>
     val formClient = config.getClients.findClient("FormClient").asInstanceOf[FormClient]
     val call = Call(GET, formClient.getCallbackUrl)

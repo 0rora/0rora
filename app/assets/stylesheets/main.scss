@@ -113,3 +113,20 @@ tr.payments-list-item td.columnE { width: 15%; }
   display: flex;
   align-items: center;
 }
+
+.highlight {
+  background-color: #f5f5f5;
+  border-radius: 6px;
+  color: #586e75;
+}
+
+.fa-butt {
+  bottom: 0;
+  position: fixed;
+  margin: 1em;
+  right: 0;
+  box-shadow:
+          0 5px 11px -2px rgba(0, 0, 0, 0.18),
+          0 4px 12px -7px rgba(0, 0, 0, 0.15);
+
+}
