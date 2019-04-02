@@ -26,14 +26,6 @@ class HomeControllerSpec(implicit ec: ExecutionEnv) extends PlaySpecification wi
       contentAsString(result) must contain("login-form")
       status(result) mustEqual 200
     }
-
-    "create the admin user, if it doesn't already exist" >> {
-      val authenticator = mock[DbProfileService]
-      authenticator.findById("admin") returns null
-      new HomeController(Stubs.stubSecurityComponents(loggedIn = false), authenticator)
-
-      there was one(authenticator).create(ArgumentMatchers.any[DbProfile], ArgumentMatchers.eq("admin"))
-    }
   }
 
 }
