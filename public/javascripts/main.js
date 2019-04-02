@@ -258,6 +258,32 @@ function enableModalToggles() {
     $('.fa-butt > a').click(function (e) {
         let onElement = e.currentTarget.attributes['aria-controls'].value;
         $('#' + onElement).addClass('is-active');
+
+    });
+    $(document).keyup(function (e) {
+        if (e.which === 27) {
+            $('.modal').removeClass('is-active');
+        }
+    });
+
+}
+
+function enableSecretSeedValidation() {
+    let textField = $('#modal-add-account [name="seed"]');
+    let okButton = $('#modal-add-account .is-success');
+    textField.on('input', function() {
+        let seed = textField.val();
+        if (seed.length === 56 && seed.startsWith('S')) {
+            try {
+                StellarBase.Keypair.fromSecret(textField.val())
+            } catch {
+                okButton.prop("disabled", true);
+                return;
+            }
+            okButton.prop("disabled", false);
+        } else {
+            okButton.prop("disabled", true);
+        }
     });
 }
 
@@ -276,6 +302,7 @@ window.onload = function() {
     // drawer();
     enableFileDragAndDrop();
     enableModalToggles();
+    enableSecretSeedValidation();
     if ($('#login-form').length === 0) {
         window.onhashchange = hashChanged;
         window.location.hash = "#payments-history";
