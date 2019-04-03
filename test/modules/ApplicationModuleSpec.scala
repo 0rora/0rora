@@ -8,11 +8,11 @@ import scalikejdbc.{AutoSession, DBSession}
 
 import scala.language.existentials
 
-class PaymentProcessorModuleSpec extends Specification {
+class ApplicationModuleSpec extends Specification {
 
   "the processor module" should {
     "bind instances for dependency injection" >> {
-      val bindings = new PaymentProcessorModule().bindings(Environment.simple(), Configuration.empty)
+      val bindings = new ApplicationModule().bindings(Environment.simple(), Configuration.empty)
       bindings.size mustEqual 2
       val Seq(a, b) = bindings
       a must beLike[Binding[_]] { case binding =>

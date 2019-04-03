@@ -271,24 +271,68 @@ function enableModalToggles() {
 function enableSecretSeedValidation() {
     let textField = $('#modal-add-account [name="seed"]');
     let okButton = $('#modal-add-account .is-success');
+    let helpText = $('#modal-add-account .help');
+
+    let setSubmittable = function(en) {
+        okButton.prop("disabled", !en);
+    };
+
+    textField.keyup(function(ev) {
+        if (ev.which === 13 && !okButton.prop('disabled')) {
+            addAccount();
+        }
+    });
+
     textField.on('input', function() {
-        let seed = textField.val();
+        helpText.removeClass('is-danger');
+        helpText.text('Your secret seed is stored encrypted and never displayed.');
+        textField.removeClass('is-danger');
+
+        let seed = textField.val().toUpperCase();
         if (seed.length === 56 && seed.startsWith('S')) {
             try {
-                StellarBase.Keypair.fromSecret(textField.val())
+                StellarBase.Keypair.fromSecret(seed);
             } catch {
-                okButton.prop("disabled", true);
+                setSubmittable(false);
                 return;
             }
-            okButton.prop("disabled", false);
+            setSubmittable(true);
         } else {
-            okButton.prop("disabled", true);
+            setSubmittable(false);
         }
     });
 }
 
+function addAccount() {
+    let textField = $('#modal-add-account [name="seed"]');
+
+    let req = $.ajax({
+        type: 'POST',
+        url: '/accounts/add',
+        data: {
+            'csrfToken': $('#modal-add-account [name="csrfToken"]').val(),
+            'seed': textField.val()
+        },
+        success: function (response) {
+            dismiss('#modal-add-account');
+        },
+        dataType: 'json'
+    });
+    req.fail(function(r) {
+        let textField = $('#modal-add-account [name="seed"]');
+        let helpText = $('#modal-add-account .help');
+        let okButton = $('#modal-add-account .is-success');
+        okButton.prop('disabled', true);
+        textField.addClass('is-danger');
+        helpText.addClass('is-danger');
+        helpText.text(r.responseJSON.failure);
+    });
+
+    textField.val('');
+}
+
 function dismiss(modal) {
-    $('#' + modal).removeClass('is-active');
+    $(modal).removeClass('is-active');
 }
 
 let originalOnload = window.onload;
@@ -298,8 +342,6 @@ window.onload = function() {
     }
     $(window).resize(resizeThrottler);
     actualResizeHandler();
-    // topAppBar();
-    // drawer();
     enableFileDragAndDrop();
     enableModalToggles();
     enableSecretSeedValidation();

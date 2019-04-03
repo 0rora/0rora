@@ -146,7 +146,7 @@
         <div class="modal-card">
             <header class="modal-card-head">
                 <p class="modal-card-title">Add Account</p>
-                <button class="delete" aria-label="close" onClick="dismiss('modal-add-account')"></button>
+                <button class="delete" aria-label="close" onClick="dismiss('#modal-add-account')"></button>
             </header>
             <section class="modal-card-body">
                 <div class="content">
@@ -154,19 +154,20 @@
                         <label class="label">Secret Seed</label>
                         <div class="control">
                             <p class="control has-icons-left">
+                                @helper.CSRF.formField
                                 <input name="seed" class="input" type="password" placeholder="S...">
                                 <span class="icon is-small is-left">
-                                    <i class="fas fa-lock"></i>
+                                    <i class="fas fa-key"></i>
                                 </span>
                             </p>
                         </div>
-                        <p class="help">Your secret seed is stored encrypted and never displayed or transmitted.</p>
+                        <p class="help">Your secret seed is stored encrypted and never displayed.</p>
                     </div>
                 </div>
             </section>
             <footer class="modal-card-foot">
-                <button disabled class="button is-success" onClick="dismiss('modal-add-account')">Add</button>
-                <button class="button" onClick="dismiss('modal-add-account')">Cancel</button>
+                <button disabled class="button is-success" onClick="addAccount()">Add</button>
+                <button class="button" onClick="dismiss('#modal-add-account')">Cancel</button>
             </footer>
         </div>
     </div>

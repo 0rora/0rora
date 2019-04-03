@@ -5,7 +5,7 @@ import play.api.{Configuration, Environment}
 import play.api.inject.{Binding, Module}
 import scalikejdbc.{AutoSession, DBSession}
 
-class PaymentProcessorModule extends Module {
+class ApplicationModule extends Module {
   def bindings(env: Environment, config: Configuration): Seq[Binding[_]] =
     Seq(
       bind[PaymentProcessor].toSelf.eagerly(),
