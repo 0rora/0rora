@@ -136,10 +136,10 @@
         <script id="account-template" type="x-tmpl-mustache">
             <div class="container">
                 {{ #accounts }}
-                <div class="box">
-                    <div class="columns">
-                        <div class="column is-four-fifths is-text-overflow">{{ id }}</div>
-                        <nav class="column has-text-right">
+                <div class="box compact-box">
+                    <div class="media">
+                        <div class="media-content is-text-overflow">{{ id }}</div>
+                        <nav class="media-right">
                             <a aria-label="delete">
                                 <span class="icon is-small has-text-grey-light">
                                     <i class="fas fa-trash" aria-hidden="true"></i>
@@ -149,7 +149,11 @@
                     </div>
                 </div>
                 {{ /accounts }}
-                <span class="fa-butt"><a class="button is-primary" aria-controls="modal-add-account">Add Account</a></span>
+                <span class="fa-butt">
+                    <a class="button is-primary" onclick="activate('#modal-add-account');" aria-controls="modal-add-account">
+                        Add Account
+                    </a>
+                </span>
             </div>
         </script>
 
@@ -172,7 +176,7 @@
                         <div class="control">
                             <p class="control has-icons-left">
                                 @helper.CSRF.formField
-                                <input name="seed" class="input" type="password" placeholder="S...">
+                                <input name="seed" class="input target-focus" type="password" placeholder="S...">
                                 <span class="icon is-small is-left">
                                     <i class="fas fa-key"></i>
                                 </span>

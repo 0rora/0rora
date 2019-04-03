@@ -137,3 +137,9 @@ tr.payments-list-item td.columnE { width: 15%; }
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+.compact-box {
+  margin-bottom: 0.5rem !important;
+  border-radius: 0;
+  padding: 1rem;
+}

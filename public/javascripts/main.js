@@ -273,12 +273,7 @@ function hashChanged(e) {
     switchDashboardFocusTo(window.location.hash.substr(1));
 }
 
-function enableModalToggles() {
-    $('.fa-butt > a').click(function (e) {
-        let onElement = e.currentTarget.attributes['aria-controls'].value;
-        $('#' + onElement).addClass('is-active');
-
-    });
+function enableModalToggleOff() {
     $(document).keyup(function (e) {
         if (e.which === 27) {
             $('.modal').removeClass('is-active');
@@ -334,6 +329,7 @@ function addAccount() {
         },
         success: function (response) {
             dismiss('#modal-add-account');
+            loadAccounts();
         },
         dataType: 'json'
     });
@@ -345,6 +341,7 @@ function addAccount() {
         textField.addClass('is-danger');
         helpText.addClass('is-danger');
         helpText.text(r.responseJSON.failure);
+        textField.focus();
     });
 
     textField.val('');
@@ -352,6 +349,11 @@ function addAccount() {
 
 function dismiss(modal) {
     $(modal).removeClass('is-active');
+}
+
+function activate(modal) {
+    $(modal).addClass('is-active');
+    $(modal + ' .target-focus').focus();
 }
 
 let originalOnload = window.onload;
@@ -362,7 +364,7 @@ window.onload = function() {
     $(window).resize(resizeThrottler);
     actualResizeHandler();
     enableFileDragAndDrop();
-    enableModalToggles();
+    enableModalToggleOff();
     enableSecretSeedValidation();
     if ($('#login-form').length === 0) {
         window.onhashchange = hashChanged;
