@@ -130,3 +130,10 @@ tr.payments-list-item td.columnE { width: 15%; }
           0 4px 12px -7px rgba(0, 0, 0, 0.15);
 
 }
+
+.is-text-overflow {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
