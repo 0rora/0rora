@@ -169,6 +169,24 @@ function loadPaymentSchedule(i, key, total=0, forwards=true) {
     });
 }
 
+function loadAccounts() {
+    const template = $('#account-template').html();
+
+    $.ajax({
+        url: '/accounts/list',
+        type: 'GET',
+        success: function(data) {
+            const rendered = Mustache.render(template, {
+                accounts: data
+            });
+            $('#accounts-list').html(rendered);
+        },
+        error: function(xhr) {
+            console.log("xhr: ", xhr);
+        }
+    })
+}
+
 function trimAccountId(id) {
     if (id.indexOf('*') > 0) {
         if (id.length > 50) {
@@ -248,6 +266,7 @@ function switchDashboardFocusTo(section) {
     $('.mdc-top-app-bar__title').text(dashboardFocus.attr('title'));
     if (section === "payments-history") loadPayments(1, 0, 0,true);
     if (section === "payments-schedule") loadPaymentSchedule(1, 0, false);
+    if (section === "admin-accounts") loadAccounts();
 }
 
 function hashChanged(e) {

@@ -42,4 +42,8 @@ class AdminController @Inject()(val controllerComponents: SecurityComponents,
       case _ => Future.successful(BadRequest(Json.toJson(Map("failure" -> "No seed was sent."))))
     }
   }
+
+  def listAccounts(): Action[AnyContent] = Secure("FormClient").async { implicit req =>
+    Future(Ok(Json.toJson(accountRepo.list.map(kp => Map("id" -> kp.accountId)))))
+  }
 }
