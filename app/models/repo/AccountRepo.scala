@@ -5,6 +5,8 @@ import org.pac4j.play.store.DataEncrypter
 import scalikejdbc.{DBSession, _}
 import stellar.sdk.{KeyPair, PublicKey}
 
+// TODO (jem) - *Repo classes to be renamed to avoid confusion with the repo actors.
+
 @javax.inject.Singleton
 class AccountRepo @Inject()()(implicit val session: DBSession, encrypter: DataEncrypter) {
 

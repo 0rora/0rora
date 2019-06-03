@@ -4,20 +4,21 @@ import actors.PaymentController._
 import actors.PaymentRepository.UpdateStatus
 import akka.actor.{Actor, ActorRef}
 import models.Payment.Failed
+import models.repo.AccountRepo
 import models.{AppConfig, Payment}
 import play.api.Logger
 import stellar.sdk.model.response.{TransactionApproved, TransactionPostResponse, TransactionRejected}
 import stellar.sdk.model.result.TransactionResult.{BadSequenceNumber, InsufficientBalance}
 import stellar.sdk.model.result.{PaymentResult, PaymentSuccess, TransactionFailure, TransactionNotAttempted}
 import stellar.sdk.model.{Account, Transaction}
-import stellar.sdk.{Network, PublicKeyOps}
+import stellar.sdk.{KeyPair, Network, PublicKeyOps}
 
 import scala.annotation.tailrec
 import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration._
 import scala.util.{Failure, Success, Try}
 
-class PaymentController(payRepo: ActorRef, accountRepo: ActorRef, config: AppConfig) extends Actor {
+class PaymentController(payRepo: ActorRef, accountRepo: ActorRef, config: AppConfig, accountQueries: AccountRepo) extends Actor {
 
   import context.dispatcher
 
@@ -26,10 +27,10 @@ class PaymentController(payRepo: ActorRef, accountRepo: ActorRef, config: AppCon
   override def preStart(): Unit = {
     payRepo ! Subscribe(self)
     accountRepo ! Subscribe(self)
-    config.accounts.map(_._2.asPublicKey).foreach(accountRepo ! _)
+    accountQueries.list.map(_.asPublicKey).foreach(accountRepo ! _)
   }
 
-  override def receive: Receive = newState(State())
+  override def receive: Receive = newState(State(keyPairs = accountQueries.list.map(kp => kp.accountId -> kp).toMap))
 
   private def newState(s: State): Receive = {
     pendingPayment(s) orElse validPayment(s) orElse invalidPayment(s) orElse
@@ -41,7 +42,7 @@ class PaymentController(payRepo: ActorRef, accountRepo: ActorRef, config: AppCon
     case p: Payment =>
       logger.trace(s"[payment ${p.id.get}] is pending")
       context.become(newState(s.incValidating))
-      PaymentController.validate(p)(context.dispatcher, config) onComplete {
+      PaymentController.validate(p, s)(context.dispatcher, config) onComplete {
         case Success(valid) =>
           logger.trace(s"[payment ${p.id.get}] is valid")
           self ! Valid(valid)
@@ -81,7 +82,7 @@ class PaymentController(payRepo: ActorRef, accountRepo: ActorRef, config: AppCon
     case b: PaymentBatch =>
       logger.debug(s"[batch ${s.batchId}] Submitting ${b.ps.size} payments for processing from ${b.accn.publicKey.accountId}")
       context.become(newState(s.withIncBatchId))
-      transact(b).onComplete(handlePaymentResponse(b, s.batchId))
+      transact(b, s).onComplete(handlePaymentResponse(b, s.batchId))
   }
 
   def handlePaymentResponse(b: PaymentBatch, id: Long): Try[TransactionPostResponse] => Unit = {
@@ -153,11 +154,11 @@ class PaymentController(payRepo: ActorRef, accountRepo: ActorRef, config: AppCon
       context.become(newState(s.copy(streamsInProgress = streamsInProgress)))
   }
 
-  def transact(b: PaymentBatch): Future[TransactionPostResponse] = {
+  def transact(b: PaymentBatch, s: State): Future[TransactionPostResponse] = {
     val PaymentBatch(payments, source) = b
     val ops = payments.flatMap(_.asOperation)
     val accountIds = (source.publicKey +: ops.flatMap(_.sourceAccount)).map(_.accountId).distinct
-    val h +: t = accountIds.map(config.accounts)
+    val h +: t = accountIds.map(s.keyPairs)
     Transaction(source, ops).sign(h, t: _*).submit()
   }
 
@@ -189,15 +190,16 @@ object PaymentController {
 
   case class StreamInProgress(inProgress: Boolean)
 
-  def validate(p: Payment)(implicit ec: ExecutionContext, config: AppConfig): Future[Payment] = for {
-    s <- p.source.pk()
-    d <- p.destination.pk()
+  def validate(p: Payment, s: State)(implicit ec: ExecutionContext, config: AppConfig): Future[Payment] = for {
+    src <- p.source.pk()
+    dst <- p.destination.pk()
   } yield {
-    if (config.accounts.contains(s.accountId)) p.copy(sourceResolved = Some(s), destinationResolved = Some(d))
-    else throw MissingSignerException(s)
+    if (s.keyPairs.contains(src.accountId)) p.copy(sourceResolved = Some(src), destinationResolved = Some(dst))
+    else throw MissingSignerException(src)
   }
 
   case class State(valid: Seq[Payment] = Nil,
+                   keyPairs: Map[String, KeyPair] = Map.empty,
                    accounts: Map[String, Account] = Map.empty,
                    batchId: Long = 0,
                    validationsInFlight: Int = 0,

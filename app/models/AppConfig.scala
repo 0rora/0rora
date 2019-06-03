@@ -13,7 +13,6 @@ import scala.util.Try
 @ImplementedBy(classOf[FileAppConfig])
 trait AppConfig {
   val network: Network
-  val accounts: Map[String, KeyPair]
 }
 
 @Singleton
@@ -27,10 +26,6 @@ class FileAppConfig @Inject()(val conf: Configuration) extends AppConfig {
         throw InvalidConfig(s"Configured network is unknown: `0rora.horizon = $s`", t)
       }.get
   }
-
-  val accounts: Map[String, KeyPair] =
-    conf.underlying.getStringList("0rora.accounts").asScala.map(KeyPair.fromSecretSeed)
-      .map(kp => kp.accountId -> kp).toMap
 
 }
 
