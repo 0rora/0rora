@@ -32,15 +32,6 @@ class SecurityModule(environment: Environment, configuration: Configuration) ext
     val logoutController = new LogoutController()
     logoutController.setDefaultUrl("/")
     bind(classOf[LogoutController]).toInstance(logoutController)
-
-    // todo - Creation of first user is to be handled differently.
-    val authenticator = provideAuthenticator
-    if (Option(authenticator.findById("admin")).isEmpty) {
-      val p = new DbProfile()
-      p.setId("admin")
-      p.addAttribute(Pac4jConstants.USERNAME, "admin")
-      authenticator.create(p, "admin")
-    }
   }
   // $COVERAGE-ON$
 
