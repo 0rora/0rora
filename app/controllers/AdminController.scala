@@ -4,7 +4,7 @@ import java.sql.SQLException
 
 import javax.inject.Inject
 import models.AppConfig
-import models.repo.AccountRepo
+import models.db.AccountDao
 import org.pac4j.core.profile.CommonProfile
 import org.pac4j.play.scala.{Security, SecurityComponents}
 import play.api.libs.json.Json
@@ -16,7 +16,7 @@ import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success, Try}
 
 class AdminController @Inject()(val controllerComponents: SecurityComponents,
-                                accountRepo: AccountRepo,
+                                accountRepo: AccountDao,
                                 config: AppConfig) extends BaseController with Security[CommonProfile] {
 
   implicit private val ec: ExecutionContext = controllerComponents.executionContext

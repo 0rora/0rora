@@ -1,4 +1,4 @@
-package models.repo
+package models.db
 
 import java.time.{ZoneId, ZonedDateTime}
 
@@ -22,40 +22,11 @@ import scalikejdbc.specs2.mutable.AutoRollback
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, Future}
 
-class PaymentRepoSpec(ee: ExecutionEnv) extends Specification
-  with DockerTestKit with DockerKitDockerJava with DockerPostgresService {
+class PaymentDaoSpec(ee: ExecutionEnv) extends Specification with LocalDaoSpec {
 
   sequential
 
-  private val UTC = ZoneId.of("UTC")
-  implicit val sys: ActorSystem = ActorSystem("PaymentRepoSpec")
-  implicit val mat: ActorMaterializer = ActorMaterializer()
-
-  override def beforeAll(): Unit = {
-    try {
-      startAllOrFail()
-    } catch {
-      case t: Throwable => t.printStackTrace()
-    }
-
-    val db = Databases(
-      driver = "org.postgresql.Driver",
-      url = s"jdbc:postgresql://127.0.0.1:$PostgresExposedPort/",
-      name = "default",
-      config = Map(
-        "username" -> PostgresUser,
-        "password" -> PostgresPassword,
-        "logStatements" -> true
-      )
-    )
-    val evolutions = new DatabaseEvolutions(db, "")
-    val scripts = evolutions.scripts(ThisClassLoaderEvolutionsReader)
-
-    evolutions.evolve(scripts, autocommit = true)
-    ConnectionPool.add(DEFAULT_NAME, new DataSourceConnectionPool(db.dataSource))
-  }
-
-  private def repo()(implicit session: DBSession) = new PaymentRepo()
+  private def repo()(implicit session: DBSession) = new PaymentDao()
 
   class PaymentsState(ps: Seq[Payment]) extends AutoRollback {
 
@@ -309,6 +280,4 @@ class PaymentRepoSpec(ee: ExecutionEnv) extends Specification
       repo.scheduled(limit = 280).map(_.copy(id = None)) must containTheSameElementsAs(ps.map(_.copy(id = None)))
     }
   }
-
-  private def sample(qty: Int, gen: Gen[Payment]): Seq[Payment] = Array.fill(qty)(gen.sample).toSeq.flatten
 }

@@ -2,7 +2,7 @@ package models
 
 import actors.AccountRepository
 import akka.actor.ActorSystem
-import models.repo.{AccountRepo, PaymentRepo}
+import models.db.{AccountDao, PaymentDao}
 import org.specs2.concurrent.ExecutionEnv
 import org.specs2.matcher.MatchSuccess
 import org.specs2.mock.Mockito
@@ -23,9 +23,9 @@ class PaymentProcessorSpec(implicit ee: ExecutionEnv) extends Specification with
   "a payment processor" should {
     "start up after 3 seconds" >> {
       val source = KeyPair.random
-      val payRepo = mock[PaymentRepo]
+      val payRepo = mock[PaymentDao]
       payRepo.due returns Iterator.empty
-      val accountQueries = mock[AccountRepo]
+      val accountQueries = mock[AccountDao]
 
       val nw = StubNetwork()
       nw.expectAccount(source.asPublicKey,

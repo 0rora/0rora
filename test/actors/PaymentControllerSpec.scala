@@ -6,7 +6,7 @@ import akka.actor.{ActorSystem, Props}
 import akka.testkit.{ImplicitSender, TestKit, TestProbe}
 import models.Generators.{genScheduledPayment, sampleOf}
 import models.Payment.{Failed, Succeeded}
-import models.repo.AccountRepo
+import models.db.AccountDao
 import models.{AppConfig, RawAccountId, StubNetwork}
 import org.mockito.Mockito.when
 import org.scalacheck.Gen
@@ -368,8 +368,8 @@ class PaymentControllerSpec extends TestKit(ActorSystem("payment-controller-spec
     }
   }
 
-  private def setupForFailure: (TestProbe, TestProbe, AppConfig, AccountRepo) = {
-    val accountRepo = mock[AccountRepo]
+  private def setupForFailure: (TestProbe, TestProbe, AppConfig, AccountDao) = {
+    val accountRepo = mock[AccountDao]
     when(accountRepo.list).thenReturn(Seq(KeyPair.random))
     (TestProbe(), TestProbe(), new AppConfig {
       override val network: Network = StubNetwork(fail = true)
@@ -377,8 +377,8 @@ class PaymentControllerSpec extends TestKit(ActorSystem("payment-controller-spec
   }
 
   private def setup(numAccounts: Int = 1, respondWith: Seq[TransactionPostResponse] = Seq(TransactionApproved("", 1, "", "", "")))
-  : (TestProbe, TestProbe, AppConfig, AccountRepo) = {
-    val accountRepo = mock[AccountRepo]
+  : (TestProbe, TestProbe, AppConfig, AccountDao) = {
+    val accountRepo = mock[AccountDao]
     when(accountRepo.list).thenReturn((0 until numAccounts).map{_ => KeyPair.random})
     (TestProbe(), TestProbe(), new AppConfig {
       override val network: Network = StubNetwork(respondWith)

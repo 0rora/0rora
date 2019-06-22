@@ -4,7 +4,7 @@ import actors.PaymentRepository.Poll
 import actors.{AccountRepository, PaymentController, PaymentRepository}
 import akka.actor.{ActorSystem, Props}
 import javax.inject.{Inject, Singleton}
-import models.repo.{AccountRepo, PaymentRepo}
+import models.db.{AccountDao, PaymentDao}
 import play.api.inject.{Binding, BindingKey, Module}
 import play.api.{Configuration, Environment}
 import scalikejdbc.{AutoSession, DBSession}
@@ -13,8 +13,8 @@ import scala.concurrent.ExecutionContextExecutor
 import scala.concurrent.duration._
 
 @Singleton
-class PaymentProcessor @Inject()(repo: PaymentRepo,
-                                 accountQueries: AccountRepo,
+class PaymentProcessor @Inject()(repo: PaymentDao,
+                                 accountQueries: AccountDao,
                                  config: AppConfig,
                                  system: ActorSystem) {
 

@@ -5,7 +5,7 @@ import java.time.{Instant, ZoneId, ZonedDateTime}
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
 import models.Generators.genSuccessfulPayment
-import models.repo.PaymentRepo
+import models.db.PaymentDao
 import models.{AccountIdLike, Payment}
 import org.scalacheck.{Arbitrary, Gen}
 import org.specs2.ScalaCheck
@@ -54,7 +54,7 @@ class PaymentsControllerSpec(implicit ec: ExecutionEnv) extends PlaySpecificatio
   "GET listHistory" should {
 
     "return history window and total count" >> prop { (ps: Seq[Payment], total: Int) =>
-      val paymentRepo = mock[PaymentRepo]
+      val paymentRepo = mock[PaymentDao]
       paymentRepo.history() returns ps.take(100)
       paymentRepo.countHistoric returns total
       val controller = new PaymentsController(Stubs.stubSecurityComponents(), paymentRepo)
@@ -70,7 +70,7 @@ class PaymentsControllerSpec(implicit ec: ExecutionEnv) extends PlaySpecificatio
   "GET listHistoryBefore" should {
 
     "return history window and no total count" >> prop { ps: Seq[Payment] =>
-      val paymentRepo = mock[PaymentRepo]
+      val paymentRepo = mock[PaymentDao]
       paymentRepo.historyBefore(75) returns ps.take(100)
       val controller = new PaymentsController(Stubs.stubSecurityComponents(), paymentRepo)
       val result = controller.listHistoryBefore(75).apply(FakeRequest())
@@ -85,7 +85,7 @@ class PaymentsControllerSpec(implicit ec: ExecutionEnv) extends PlaySpecificatio
   "GET listHistoryAfter" should {
 
     "return history window and no total count" >> prop { ps: Seq[Payment] =>
-      val paymentRepo = mock[PaymentRepo]
+      val paymentRepo = mock[PaymentDao]
       paymentRepo.historyAfter(75) returns ps.take(100)
       val controller = new PaymentsController(Stubs.stubSecurityComponents(), paymentRepo)
       val result = controller.listHistoryAfter(75).apply(FakeRequest())
@@ -100,7 +100,7 @@ class PaymentsControllerSpec(implicit ec: ExecutionEnv) extends PlaySpecificatio
   "GET listScheduled" should {
 
     "return scheduled payment window and total count" >> prop { (ps: Seq[Payment], total: Int) =>
-      val paymentRepo = mock[PaymentRepo]
+      val paymentRepo = mock[PaymentDao]
       paymentRepo.scheduled() returns ps.take(100)
       paymentRepo.countScheduled returns total
       val controller = new PaymentsController(Stubs.stubSecurityComponents(), paymentRepo)
@@ -116,7 +116,7 @@ class PaymentsControllerSpec(implicit ec: ExecutionEnv) extends PlaySpecificatio
   "GET listScheduledBefore" should {
 
     "return scheduled payment window and no count" >> prop { (ps: Seq[Payment], id: Int) =>
-      val paymentRepo = mock[PaymentRepo]
+      val paymentRepo = mock[PaymentDao]
       paymentRepo.scheduledBefore(id) returns ps.take(100)
       val controller = new PaymentsController(Stubs.stubSecurityComponents(), paymentRepo)
       val result = controller.listScheduledBefore(id).apply(FakeRequest())
@@ -130,7 +130,7 @@ class PaymentsControllerSpec(implicit ec: ExecutionEnv) extends PlaySpecificatio
   "GET listScheduledAfter" should {
 
     "return scheduled payment window and no count" >> prop { (ps: Seq[Payment], id: Int) =>
-      val paymentRepo = mock[PaymentRepo]
+      val paymentRepo = mock[PaymentDao]
       paymentRepo.scheduledAfter(id) returns ps.take(100)
       val controller = new PaymentsController(Stubs.stubSecurityComponents(), paymentRepo)
       val result = controller.listScheduledAfter(id).apply(FakeRequest())

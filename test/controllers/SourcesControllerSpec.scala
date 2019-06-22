@@ -8,7 +8,7 @@ import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.{Flow, Keep, Sink}
 import models.Generators._
-import models.repo.PaymentRepo
+import models.db.PaymentDao
 import models.{Payment, PaymentProcessor}
 import org.scalacheck.Gen
 import org.specs2.concurrent.ExecutionEnv
@@ -68,7 +68,7 @@ class SourcesControllerSpec(implicit ec: ExecutionEnv) extends PlaySpecification
   }
 
   private def result(content: String): Future[(Result, Seq[Payment], Boolean)] = {
-    val repo = mock[PaymentRepo]
+    val repo = mock[PaymentDao]
     val flows = mutable.Buffer.empty[Payment]
     val writer: Sink[Payment, Future[Done]] = Flow[Payment].toMat(Sink.foreach { p: Payment =>
       flows += p

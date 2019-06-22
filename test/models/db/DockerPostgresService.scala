@@ -1,4 +1,4 @@
-package models.repo
+package models.db
 
 import java.sql.DriverManager
 

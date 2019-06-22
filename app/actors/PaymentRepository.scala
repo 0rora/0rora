@@ -8,12 +8,12 @@ import actors.PaymentRepository._
 import akka.actor.{Actor, ActorRef}
 import models.Payment
 import models.Payment.Status
-import models.repo.PaymentRepo
+import models.db.PaymentDao
 import play.api.Logger
 
 import scala.concurrent.duration._
 
-class PaymentRepository(repo: PaymentRepo) extends Actor {
+class PaymentRepository(repo: PaymentDao) extends Actor {
 
   import context.dispatcher
 

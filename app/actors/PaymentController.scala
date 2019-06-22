@@ -4,7 +4,7 @@ import actors.PaymentController._
 import actors.PaymentRepository.UpdateStatus
 import akka.actor.{Actor, ActorRef}
 import models.Payment.Failed
-import models.repo.AccountRepo
+import models.db.AccountDao
 import models.{AppConfig, Payment}
 import play.api.Logger
 import stellar.sdk.model.response.{TransactionApproved, TransactionPostResponse, TransactionRejected}
@@ -18,7 +18,7 @@ import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration._
 import scala.util.{Failure, Success, Try}
 
-class PaymentController(payRepo: ActorRef, accountRepo: ActorRef, config: AppConfig, accountQueries: AccountRepo) extends Actor {
+class PaymentController(payRepo: ActorRef, accountRepo: ActorRef, config: AppConfig, accountQueries: AccountDao) extends Actor {
 
   import context.dispatcher
 

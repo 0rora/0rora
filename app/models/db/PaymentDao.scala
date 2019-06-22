@@ -1,4 +1,4 @@
-package models.repo
+package models.db
 
 import java.time.{ZoneId, ZonedDateTime}
 
@@ -14,7 +14,7 @@ import scala.concurrent.Future
 import scala.concurrent.duration._
 
 @javax.inject.Singleton
-class PaymentRepo @Inject()()(implicit val session: DBSession) {
+class PaymentDao @Inject()()(implicit val session: DBSession) {
 
   private val UTC = ZoneId.of("UTC")
 
