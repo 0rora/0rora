@@ -16,7 +16,7 @@ import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success, Try}
 
 class AdminController @Inject()(val controllerComponents: SecurityComponents,
-                                accountRepo: AccountDao,
+                                accountDao: AccountDao,
                                 config: AppConfig) extends BaseController with Security[CommonProfile] {
 
   implicit private val ec: ExecutionContext = controllerComponents.executionContext
@@ -28,14 +28,14 @@ class AdminController @Inject()(val controllerComponents: SecurityComponents,
         Try(KeyPair.fromSecretSeed(seed)) match {
           case Success(kp) =>
             config.network.account(kp).map { accn =>
-              Try(accountRepo.insert(kp)) match {
+              Try(accountDao.insert(kp)) match {
                 case Success(_) => Ok(Json.toJson(Map("account" -> kp.accountId)))
                 case Failure(t: SQLException) if t.getSQLState == DuplicateKeyViolationCode =>
-                  BadRequest(Json.toJson(Map("failure" -> s"The account already exists.")))
+                  BadRequest(Json.toJson(Map("failure" -> "The account already exists.")))
                 case Failure(t) => InternalServerError(t.getMessage)
               }
             }.recover { case _ =>
-              BadRequest(Json.toJson(Map("failure" -> s"The account does not exist.")))
+              BadRequest(Json.toJson(Map("failure" -> "The account does not exist.")))
             }
           case Failure(_) => Future.successful(BadRequest(Json.toJson(Map("failure" -> "The seed is invalid."))))
         }
@@ -44,6 +44,6 @@ class AdminController @Inject()(val controllerComponents: SecurityComponents,
   }
 
   def listAccounts(): Action[AnyContent] = Secure("FormClient").async { implicit req =>
-    Future(Ok(Json.toJson(accountRepo.list.map(kp => Map("id" -> kp.accountId)))))
+    Future(Ok(Json.toJson(accountDao.list.map(kp => Map("id" -> kp.accountId)))))
   }
 }
