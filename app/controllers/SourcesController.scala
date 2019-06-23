@@ -9,7 +9,7 @@ import akka.stream.scaladsl.{Keep, Sink, Source}
 import javax.inject.Inject
 import kantan.csv.ops._
 import kantan.csv.{rfc, _}
-import models.repo.PaymentRepo
+import models.db.PaymentDao
 import models.{AccountIdLike, Payment, PaymentProcessor}
 import play.api.Logger
 import play.api.libs.Files
@@ -21,7 +21,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.util.{Failure, Success, Try}
 
 class SourcesController @Inject()(cc: MessagesControllerComponents,
-                                  paymentRepo: PaymentRepo,
+                                  paymentRepo: PaymentDao,
                                   paymentProcessor: PaymentProcessor)
                                  (implicit val system: ActorSystem) extends MessagesAbstractController(cc) {
 

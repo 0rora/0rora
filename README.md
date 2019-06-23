@@ -21,6 +21,18 @@ You are free to copy, modify, and distribute 0rora with attribution under the te
 ## Installation
 
 1. Create an empty Postgres Database.
+
+For example, you may create a Postgres docker container and create your empty database therein.
+
+```bash
+docker run --name 0rora_pg -e POSTGRES_PASSWORD=admin_password -d -p "5432:5432" postgres
+cat << EOF | docker exec -i 0rora_pg /usr/bin/psql -U postgres
+  create database orora;
+  create user ford with encrypted password 'pr3fekt';
+  grant all privileges on database orora to ford;
+EOF
+```
+
 2. Run the 0rora [docker image](https://cloud.docker.com/repository/docker/synesso/0rora), passing environment values
     for your database.
 

@@ -31,7 +31,6 @@ class AccountRepositorySpec extends TestKit(ActorSystem("account-repository-spec
       n.expectAccount(accn.publicKey, response)
       val conf = new AppConfig() {
         override val network: Network = n
-        override val accounts: Map[String, KeyPair] = Map.empty
       }
 
       val actor = system.actorOf(Props(new AccountRepository(conf)))
@@ -51,7 +50,6 @@ class AccountRepositorySpec extends TestKit(ActorSystem("account-repository-spec
       when(n.account(accn.publicKey.asPublicKey)).thenReturn(Future.failed(new RuntimeException("!")))
       val conf = new AppConfig() {
         override val network: Network = n
-        override val accounts: Map[String, KeyPair] = Map.empty
       }
 
       val actor = system.actorOf(Props(new AccountRepository(conf)))

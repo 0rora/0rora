@@ -6,6 +6,7 @@ import models.InvalidConfig
 import org.apache.shiro.authc.credential.DefaultPasswordService
 import org.pac4j.core.client.Clients
 import org.pac4j.core.config.Config
+import org.pac4j.core.context.Pac4jConstants
 import org.pac4j.core.credentials.password.ShiroPasswordEncoder
 import org.pac4j.core.profile.CommonProfile
 import org.pac4j.http.client.indirect.FormClient
@@ -13,6 +14,7 @@ import org.pac4j.play.LogoutController
 import org.pac4j.play.http.PlayHttpActionAdapter
 import org.pac4j.play.scala.{DefaultSecurityComponents, Pac4jScalaTemplateHelper, SecurityComponents}
 import org.pac4j.play.store.{DataEncrypter, PlayCookieSessionStore, PlaySessionStore, ShiroAesDataEncrypter}
+import org.pac4j.sql.profile.DbProfile
 import org.pac4j.sql.profile.service.DbProfileService
 import play.api.{Configuration, Environment}
 

@@ -6,7 +6,9 @@ import akka.actor.{ActorSystem, Props}
 import akka.testkit.{ImplicitSender, TestKit, TestProbe}
 import models.Generators.{genScheduledPayment, sampleOf}
 import models.Payment.{Failed, Succeeded}
+import models.db.AccountDao
 import models.{AppConfig, RawAccountId, StubNetwork}
+import org.mockito.Mockito.when
 import org.scalacheck.Gen
 import org.scalatest.concurrent.Eventually
 import org.scalatest.mockito.MockitoSugar
@@ -31,26 +33,26 @@ class PaymentControllerSpec extends TestKit(ActorSystem("payment-controller-spec
 
   "the payment controller" must {
     "subscribe to helpers and register configured accounts on startup" in {
-      val (payRepoProbe, accnRepoProbe, config) = setup()
+      val (payRepoProbe, accnRepoProbe, config, accnRepo) = setup()
 
-      val actor = system.actorOf(Props(new PaymentController(payRepoProbe.ref, accnRepoProbe.ref, config)))
+      val actor = system.actorOf(Props(new PaymentController(payRepoProbe.ref, accnRepoProbe.ref, config, accnRepo)))
 
       payRepoProbe.expectMsg(3.seconds, Subscribe(actor))
       accnRepoProbe.expectMsg(3.seconds, Subscribe(actor))
-      accnRepoProbe.expectMsg(3.seconds, config.accounts.head._2.asPublicKey)
+      accnRepoProbe.expectMsg(3.seconds, accnRepo.list.head.asPublicKey)
     }
   }
 
   "a pending payment" must {
     "be processed in a batch when valid" in {
-      val (payRepoProbe, accnRepoProbe, config) = setup()
-      val payment = sampleOf(genScheduledPayment).copy(source = RawAccountId(config.accounts.head._1))
-      val accn = Account(config.accounts.head._2.asPublicKey, 123L)
+      val (payRepoProbe, accnRepoProbe, config, accnRepo) = setup()
+      val payment = sampleOf(genScheduledPayment).copy(source = RawAccountId(accnRepo.list.head.accountId))
+      val accn = Account(accnRepo.list.head.asPublicKey, 123L)
 
-      val actor = system.actorOf(Props(new PaymentController(payRepoProbe.ref, accnRepoProbe.ref, config)))
+      val actor = system.actorOf(Props(new PaymentController(payRepoProbe.ref, accnRepoProbe.ref, config, accnRepo)))
       payRepoProbe.expectMsg(3.seconds, Subscribe(actor))
       accnRepoProbe.expectMsg(3.seconds, Subscribe(actor))
-      accnRepoProbe.expectMsg(3.seconds, config.accounts.head._2.asPublicKey)
+      accnRepoProbe.expectMsg(3.seconds, accnRepo.list.head.asPublicKey)
       actor ! UpdateAccount(accn)
 
       actor ! StreamInProgress(true)
@@ -63,20 +65,20 @@ class PaymentControllerSpec extends TestKit(ActorSystem("payment-controller-spec
         assert(posted.head.transaction.operations == Seq(PaymentOperation(
           destinationAccount = KeyPair.fromAccountId(payment.destination.account),
           amount = NativeAmount(payment.units),
-          sourceAccount = Some(config.accounts.head._2.asPublicKey)
+          sourceAccount = Some(accnRepo.list.head.asPublicKey)
         )))
       }
     }
 
     "be sent to the payment repo when invalid" in {
-      val (payRepoProbe, accnRepoProbe, config) = setup()
+      val (payRepoProbe, accnRepoProbe, config, accnRepo) = setup()
       val payment = sampleOf(genScheduledPayment).copy(source = RawAccountId("invalid"))
-      val accn = Account(config.accounts.head._2.asPublicKey, 123L)
+      val accn = Account(accnRepo.list.head.asPublicKey, 123L)
 
-      val actor = system.actorOf(Props(new PaymentController(payRepoProbe.ref, accnRepoProbe.ref, config)))
+      val actor = system.actorOf(Props(new PaymentController(payRepoProbe.ref, accnRepoProbe.ref, config, accnRepo)))
       payRepoProbe.expectMsg(3.seconds, Subscribe(actor))
       accnRepoProbe.expectMsg(3.seconds, Subscribe(actor))
-      accnRepoProbe.expectMsg(3.seconds, config.accounts.head._2.asPublicKey)
+      accnRepoProbe.expectMsg(3.seconds, accnRepo.list.head.asPublicKey)
       actor ! UpdateAccount(accn)
 
       actor ! StreamInProgress(true)
@@ -89,13 +91,13 @@ class PaymentControllerSpec extends TestKit(ActorSystem("payment-controller-spec
 
   "many pending payments" must {
     "be processed in several batches when valid" in {
-      val (payRepoProbe, accnRepoProbe, config) = setup(numAccounts = 2)
-      val payments = sampleOf(Gen.listOfN(120, genScheduledPayment)).map(_.copy(source = RawAccountId(config.accounts.head._1)))
-      val actor = system.actorOf(Props(new PaymentController(payRepoProbe.ref, accnRepoProbe.ref, config)))
+      val (payRepoProbe, accnRepoProbe, config, accnRepo) = setup(numAccounts = 2)
+      val payments = sampleOf(Gen.listOfN(120, genScheduledPayment)).map(_.copy(source = RawAccountId(accnRepo.list.head.accountId)))
+      val actor = system.actorOf(Props(new PaymentController(payRepoProbe.ref, accnRepoProbe.ref, config, accnRepo)))
       payRepoProbe.expectMsg(3.seconds, Subscribe(actor))
       accnRepoProbe.expectMsg(3.seconds, Subscribe(actor))
-      accnRepoProbe.expectMsg(3.seconds, config.accounts.head._2.asPublicKey)
-      config.accounts.values.map(_.asPublicKey).map(Account(_, 123L)).foreach(actor ! UpdateAccount(_))
+      accnRepoProbe.expectMsg(3.seconds, accnRepo.list.head.asPublicKey)
+      accnRepo.list.map(_.asPublicKey).map(Account(_, 123L)).foreach(actor ! UpdateAccount(_))
 
       actor ! StreamInProgress(true)
       payments.foreach(actor ! _)
@@ -108,13 +110,13 @@ class PaymentControllerSpec extends TestKit(ActorSystem("payment-controller-spec
     }
 
     "be processed in time when there are insufficient accounts" in {
-      val (payRepoProbe, accnRepoProbe, config) = setup()
-      val payments = sampleOf(Gen.listOfN(120, genScheduledPayment)).map(_.copy(source = RawAccountId(config.accounts.head._1)))
-      val actor = system.actorOf(Props(new PaymentController(payRepoProbe.ref, accnRepoProbe.ref, config)))
+      val (payRepoProbe, accnRepoProbe, config, accnRepo) = setup()
+      val payments = sampleOf(Gen.listOfN(120, genScheduledPayment)).map(_.copy(source = RawAccountId(accnRepo.list.head.accountId)))
+      val actor = system.actorOf(Props(new PaymentController(payRepoProbe.ref, accnRepoProbe.ref, config, accnRepo)))
       payRepoProbe.expectMsg(3.seconds, Subscribe(actor))
       accnRepoProbe.expectMsg(3.seconds, Subscribe(actor))
-      accnRepoProbe.expectMsg(3.seconds, config.accounts.head._2.asPublicKey)
-      actor ! UpdateAccount(Account(config.accounts.values.head.asPublicKey, 123L))
+      accnRepoProbe.expectMsg(3.seconds, accnRepo.list.head.asPublicKey)
+      actor ! UpdateAccount(Account(accnRepo.list.head.asPublicKey, 123L))
 
       actor ! StreamInProgress(true)
       payments.foreach(actor ! _)
@@ -129,9 +131,10 @@ class PaymentControllerSpec extends TestKit(ActorSystem("payment-controller-spec
 
   "validation of a payment" must {
     "succeed when source and destination are resolvable and source is known" in {
-      val (_, _, config) = setup()
-      val payment = sampleOf(genScheduledPayment).copy(source = RawAccountId(config.accounts.values.head.accountId))
-      assert(Await.result(PaymentController.validate(payment)(system.dispatcher, config), 1.second) ==
+      val (_, _, config, accnRepo) = setup()
+      val state = State(keyPairs = accnRepo.list.map(kp => kp.accountId -> kp).toMap)
+      val payment = sampleOf(genScheduledPayment).copy(source = RawAccountId(accnRepo.list.head.accountId))
+      assert(Await.result(PaymentController.validate(payment, state)(system.dispatcher, config), 1.second) ==
         payment.copy(
           sourceResolved = Some(KeyPair.fromAccountId(payment.source.account)),
           destinationResolved = Some(KeyPair.fromAccountId(payment.destination.account))
@@ -140,33 +143,36 @@ class PaymentControllerSpec extends TestKit(ActorSystem("payment-controller-spec
     }
 
     "fail when source is resolvable but is not known" in {
-      val (_, _, config) = setup()
+      val (_, _, config, accnRepo) = setup()
+      val state = State(keyPairs = accnRepo.list.map(kp => kp.accountId -> kp).toMap)
       val payment = sampleOf(genScheduledPayment)
       assertThrows[MissingSignerException] {
-        Await.result(PaymentController.validate(payment)(system.dispatcher, config), 1.second)
+        Await.result(PaymentController.validate(payment, state)(system.dispatcher, config), 1.second)
       }
     }
 
     "fail when source is not resolvable" in {
-      val (_, _, config) = setup()
+      val (_, _, config, accnRepo) = setup()
+      val state = State(keyPairs = accnRepo.list.map(kp => kp.accountId -> kp).toMap)
       val payment = sampleOf(genScheduledPayment).copy(source = RawAccountId("invalidness"))
       assertThrows[InvalidAccountId] {
-        Await.result(PaymentController.validate(payment)(system.dispatcher, config), 1.second)
+        Await.result(PaymentController.validate(payment, state)(system.dispatcher, config), 1.second)
       }
     }
 
     "fail when destination is not resolvable" in {
-      val (_, _, config) = setup()
+      val (_, _, config, accnRepo) = setup()
+      val state = State(keyPairs = accnRepo.list.map(kp => kp.accountId -> kp).toMap)
       val payment = sampleOf(genScheduledPayment).copy(destination = RawAccountId("invalidness"))
       assertThrows[InvalidAccountId] {
-        Await.result(PaymentController.validate(payment)(system.dispatcher, config), 1.second)
+        Await.result(PaymentController.validate(payment, state)(system.dispatcher, config), 1.second)
       }
     }
   }
 
   "handling transaction failure" must {
     "handle each payment according to its response" in {
-      val (payRepoProbe, accnRepoProbe, config) = setup(
+      val (payRepoProbe, accnRepoProbe, config, accountRepo) = setup(
         respondWith = Seq(
           TransactionRejected(1, "", "", Nil, "",
             ByteArrays.base64(TransactionFailure(NativeAmount(100),
@@ -175,13 +181,15 @@ class PaymentControllerSpec extends TestKit(ActorSystem("payment-controller-spec
           TransactionApproved("", 1, "", "", "")
         )
       )
-      val payments = sampleOf(Gen.listOfN(5, genScheduledPayment)).map(_.copy(source = RawAccountId(config.accounts.head._1)))
+      val payments = sampleOf(Gen.listOfN(5, genScheduledPayment)).map(_.copy(
+        source = RawAccountId(accountRepo.list.head.accountId)
+      ))
 
-      val actor = system.actorOf(Props(new PaymentController(payRepoProbe.ref, accnRepoProbe.ref, config)))
+      val actor = system.actorOf(Props(new PaymentController(payRepoProbe.ref, accnRepoProbe.ref, config, accountRepo)))
       payRepoProbe.expectMsg(3.seconds, Subscribe(actor))
       accnRepoProbe.expectMsg(3.seconds, Subscribe(actor))
-      accnRepoProbe.expectMsg(3.seconds, config.accounts.head._2.asPublicKey)
-      config.accounts.values.map(_.asPublicKey).map(Account(_, 123L)).foreach(actor ! UpdateAccount(_))
+      accnRepoProbe.expectMsg(3.seconds, accountRepo.list.head.asPublicKey)
+      accountRepo.list.map(_.asPublicKey).map(Account(_, 123L)).foreach(actor ! UpdateAccount(_))
 
       actor ! StreamInProgress(true)
       payments.foreach(actor ! _)
@@ -204,7 +212,7 @@ class PaymentControllerSpec extends TestKit(ActorSystem("payment-controller-spec
 
   "handling transactions not being attempted" must {
     "remove the account from circulation if there is insufficient balance" in {
-      val (payRepoProbe, accnRepoProbe, config) = setup(
+      val (payRepoProbe, accnRepoProbe, config, accnRepo) = setup(
         respondWith = Seq(
           TransactionRejected(1, "", "", Nil, "",
             ByteArrays.base64(TransactionNotAttempted(InsufficientBalance, NativeAmount(100)).encode)),
@@ -212,13 +220,13 @@ class PaymentControllerSpec extends TestKit(ActorSystem("payment-controller-spec
         ),
         numAccounts = 2
       )
-      val payment = sampleOf(genScheduledPayment).copy(source = RawAccountId(config.accounts.head._1))
+      val payment = sampleOf(genScheduledPayment).copy(source = RawAccountId(accnRepo.list.head.accountId))
 
-      val actor = system.actorOf(Props(new PaymentController(payRepoProbe.ref, accnRepoProbe.ref, config)))
+      val actor = system.actorOf(Props(new PaymentController(payRepoProbe.ref, accnRepoProbe.ref, config, accnRepo)))
       payRepoProbe.expectMsg(3.seconds, Subscribe(actor))
       accnRepoProbe.expectMsg(3.seconds, Subscribe(actor))
-      accnRepoProbe.expectMsg(3.seconds, config.accounts.head._2.asPublicKey)
-      config.accounts.values.map(_.asPublicKey).map(Account(_, 123L)).foreach(actor ! UpdateAccount(_))
+      accnRepoProbe.expectMsg(3.seconds, accnRepo.list.head.asPublicKey)
+      accnRepo.list.map(_.asPublicKey).map(Account(_, 123L)).foreach(actor ! UpdateAccount(_))
 
       actor ! StreamInProgress(true)
       actor ! payment
@@ -232,7 +240,7 @@ class PaymentControllerSpec extends TestKit(ActorSystem("payment-controller-spec
     }
 
     "retry the payments and refresh the account if the sequence number is incorrect" in {
-      val (payRepoProbe, accnRepoProbe, config) = setup(
+      val (payRepoProbe, accnRepoProbe, config, accnRepo) = setup(
         respondWith = Seq(
           TransactionRejected(1, "", "", Nil, "",
             ByteArrays.base64(TransactionNotAttempted(BadSequenceNumber, NativeAmount(100)).encode)),
@@ -240,13 +248,13 @@ class PaymentControllerSpec extends TestKit(ActorSystem("payment-controller-spec
         ),
         numAccounts = 2
       )
-      val payment = sampleOf(genScheduledPayment).copy(source = RawAccountId(config.accounts.head._1))
+      val payment = sampleOf(genScheduledPayment).copy(source = RawAccountId(accnRepo.list.head.accountId))
 
-      val actor = system.actorOf(Props(new PaymentController(payRepoProbe.ref, accnRepoProbe.ref, config)))
+      val actor = system.actorOf(Props(new PaymentController(payRepoProbe.ref, accnRepoProbe.ref, config, accnRepo)))
       payRepoProbe.expectMsg(3.seconds, Subscribe(actor))
       accnRepoProbe.expectMsg(3.seconds, Subscribe(actor))
-      accnRepoProbe.expectMsg(3.seconds, config.accounts.head._2.asPublicKey)
-      config.accounts.values.map(_.asPublicKey).map(Account(_, 123L)).foreach(actor ! UpdateAccount(_))
+      accnRepoProbe.expectMsg(3.seconds, accnRepo.list.head.asPublicKey)
+      accnRepo.list.map(_.asPublicKey).map(Account(_, 123L)).foreach(actor ! UpdateAccount(_))
 
       actor ! StreamInProgress(true)
       actor ! payment
@@ -256,23 +264,23 @@ class PaymentControllerSpec extends TestKit(ActorSystem("payment-controller-spec
         val posted = config.network.asInstanceOf[StubNetwork].posted
         assert(posted.map(_.transaction.operations.size) == Seq(1, 1))
       }
-      accnRepoProbe.expectMsg(3.seconds, config.accounts.values.last.asPublicKey)
+      accnRepoProbe.expectMsg(3.seconds, accnRepo.list.last.asPublicKey)
     }
 
     "fail the payments and refresh the account for any other failure reason" in {
-      val (payRepoProbe, accnRepoProbe, config) = setup(
+      val (payRepoProbe, accnRepoProbe, config, accnRepo) = setup(
         respondWith = Seq(
           TransactionRejected(1, "", "", Nil, "",
             ByteArrays.base64(TransactionNotAttempted(UnusedSignatures, NativeAmount(100)).encode))
         )
       )
-      val payment = sampleOf(genScheduledPayment).copy(source = RawAccountId(config.accounts.head._1))
+      val payment = sampleOf(genScheduledPayment).copy(source = RawAccountId(accnRepo.list.head.accountId))
 
-      val actor = system.actorOf(Props(new PaymentController(payRepoProbe.ref, accnRepoProbe.ref, config)))
+      val actor = system.actorOf(Props(new PaymentController(payRepoProbe.ref, accnRepoProbe.ref, config, accnRepo)))
       payRepoProbe.expectMsg(3.seconds, Subscribe(actor))
       accnRepoProbe.expectMsg(3.seconds, Subscribe(actor))
-      accnRepoProbe.expectMsg(3.seconds, config.accounts.head._2.asPublicKey)
-      config.accounts.values.map(_.asPublicKey).map(Account(_, 123L)).foreach(actor ! UpdateAccount(_))
+      accnRepoProbe.expectMsg(3.seconds, accnRepo.list.head.asPublicKey)
+      accnRepo.list.map(_.asPublicKey).map(Account(_, 123L)).foreach(actor ! UpdateAccount(_))
 
       actor ! StreamInProgress(true)
       actor ! payment
@@ -282,7 +290,7 @@ class PaymentControllerSpec extends TestKit(ActorSystem("payment-controller-spec
         val posted = config.network.asInstanceOf[StubNetwork].posted
         assert(posted.map(_.transaction.operations.size) == Seq(1))
       }
-      accnRepoProbe.expectMsg(3.seconds, config.accounts.values.last.asPublicKey)
+      accnRepoProbe.expectMsg(3.seconds, accnRepo.list.last.asPublicKey)
       payRepoProbe.expectMsg(3.seconds, UpdateStatus(Seq(payment.copy(
         sourceResolved = Some(KeyPair.fromAccountId(payment.source.account)),
         destinationResolved = Some(KeyPair.fromAccountId(payment.destination.account))
@@ -290,20 +298,20 @@ class PaymentControllerSpec extends TestKit(ActorSystem("payment-controller-spec
     }
 
     "refresh the account if there is a failure" in {
-      val (payRepoProbe, accnRepoProbe, config) = setupForFailure
-      val payment = sampleOf(genScheduledPayment).copy(source = RawAccountId(config.accounts.head._1))
+      val (payRepoProbe, accnRepoProbe, config, accnRepo) = setupForFailure
+      val payment = sampleOf(genScheduledPayment).copy(source = RawAccountId(accnRepo.list.head.accountId))
 
-      val actor = system.actorOf(Props(new PaymentController(payRepoProbe.ref, accnRepoProbe.ref, config)))
+      val actor = system.actorOf(Props(new PaymentController(payRepoProbe.ref, accnRepoProbe.ref, config, accnRepo)))
       payRepoProbe.expectMsg(3.seconds, Subscribe(actor))
       accnRepoProbe.expectMsg(3.seconds, Subscribe(actor))
-      accnRepoProbe.expectMsg(3.seconds, config.accounts.head._2.asPublicKey)
-      config.accounts.values.map(_.asPublicKey).map(Account(_, 123L)).foreach(actor ! UpdateAccount(_))
+      accnRepoProbe.expectMsg(3.seconds, accnRepo.list.head.asPublicKey)
+      accnRepo.list.map(_.asPublicKey).map(Account(_, 123L)).foreach(actor ! UpdateAccount(_))
 
       actor ! StreamInProgress(true)
       actor ! payment
       actor ! StreamInProgress(false)
 
-      accnRepoProbe.expectMsg(3.seconds, config.accounts.values.last.asPublicKey)
+      accnRepoProbe.expectMsg(3.seconds, accnRepo.list.last.asPublicKey)
     }
   }
 
@@ -360,25 +368,21 @@ class PaymentControllerSpec extends TestKit(ActorSystem("payment-controller-spec
     }
   }
 
-  private def setupForFailure: (TestProbe, TestProbe, AppConfig) = {
-    val kp = KeyPair.random
-    val accns = Map(kp.accountId -> kp)
+  private def setupForFailure: (TestProbe, TestProbe, AppConfig, AccountDao) = {
+    val accountRepo = mock[AccountDao]
+    when(accountRepo.list).thenReturn(Seq(KeyPair.random))
     (TestProbe(), TestProbe(), new AppConfig {
       override val network: Network = StubNetwork(fail = true)
-      override val accounts: Map[String, KeyPair] = accns
-    })
+    }, accountRepo)
   }
 
   private def setup(numAccounts: Int = 1, respondWith: Seq[TransactionPostResponse] = Seq(TransactionApproved("", 1, "", "", "")))
-  : (TestProbe, TestProbe, AppConfig) = {
-    val accns = (0 until numAccounts).map{_ =>
-      val kp = KeyPair.random
-      kp.accountId -> kp
-    }.toMap
+  : (TestProbe, TestProbe, AppConfig, AccountDao) = {
+    val accountRepo = mock[AccountDao]
+    when(accountRepo.list).thenReturn((0 until numAccounts).map{_ => KeyPair.random})
     (TestProbe(), TestProbe(), new AppConfig {
       override val network: Network = StubNetwork(respondWith)
-      override val accounts: Map[String, KeyPair] = accns
-    })
+    }, accountRepo)
   }
 
 }

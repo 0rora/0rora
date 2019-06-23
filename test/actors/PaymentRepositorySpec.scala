@@ -8,7 +8,7 @@ import akka.actor.{ActorSystem, Props}
 import akka.testkit.{ImplicitSender, TestKit, TestProbe}
 import models.Generators._
 import models.Payment.Failed
-import models.repo.PaymentRepo
+import models.db.PaymentDao
 import org.mockito.ArgumentMatchers.any
 import org.mockito.{ArgumentMatchers, Mockito}
 import org.mockito.Mockito.{verify, when}
@@ -25,7 +25,7 @@ class PaymentRepositorySpec extends TestKit(ActorSystem("payment-repository-spec
 
   "subscribing to the repo, and then polling" must {
     "ensure due payments are delivered to the subscriber" in {
-      val repo = mock[PaymentRepo]
+      val repo = mock[PaymentDao]
       val payments = sampleOf(Gen.listOfN(5, genScheduledPayment))
       when(repo.due).thenReturn(payments.iterator)
       when(repo.earliestTimeDue).thenReturn(None)
@@ -45,7 +45,7 @@ class PaymentRepositorySpec extends TestKit(ActorSystem("payment-repository-spec
 
   "scheduling a poll" must {
     "poll immediately when there are payments due" in {
-      val repo = mock[PaymentRepo]
+      val repo = mock[PaymentDao]
       when(repo.earliestTimeDue).thenReturn(Some(ZonedDateTime.now().minusMinutes(1)), None)
       when(repo.due).thenReturn(Iterator.empty)
       val actor = system.actorOf(Props(new PaymentRepository(repo)))
@@ -58,7 +58,7 @@ class PaymentRepositorySpec extends TestKit(ActorSystem("payment-repository-spec
     }
 
     "not poll when there are no scheduled payments" in {
-      val repo = mock[PaymentRepo]
+      val repo = mock[PaymentDao]
       when(repo.earliestTimeDue).thenReturn(None)
 
       val actor = system.actorOf(Props(new PaymentRepository(repo)))
@@ -70,7 +70,7 @@ class PaymentRepositorySpec extends TestKit(ActorSystem("payment-repository-spec
     }
 
     "poll after delay when the next scheduled payment is in the future" in {
-      val repo = mock[PaymentRepo]
+      val repo = mock[PaymentDao]
       val actor = system.actorOf(Props(new PaymentRepository(repo)))
 
       when(repo.due).thenReturn(Iterator.empty)
@@ -88,7 +88,7 @@ class PaymentRepositorySpec extends TestKit(ActorSystem("payment-repository-spec
 
   "marking a payment invalid" must {
     "delegate to the db class" in {
-      val repo = mock[PaymentRepo]
+      val repo = mock[PaymentDao]
       val actor = system.actorOf(Props(new PaymentRepository(repo)))
       val payment = sampleOf(genScheduledPayment)
 
@@ -102,7 +102,7 @@ class PaymentRepositorySpec extends TestKit(ActorSystem("payment-repository-spec
 
   "marking a payment invalid" must {
     "delegate to invalidate method in the db class" in {
-      val repo = mock[PaymentRepo]
+      val repo = mock[PaymentDao]
       val actor = system.actorOf(Props(new PaymentRepository(repo)))
       val payment = sampleOf(genScheduledPayment)
 
@@ -116,7 +116,7 @@ class PaymentRepositorySpec extends TestKit(ActorSystem("payment-repository-spec
 
   "updating the status of payments" must {
     "delegate to updateStatus method on the db class" in {
-      val repo = mock[PaymentRepo]
+      val repo = mock[PaymentDao]
       val payments = sampleOf(Gen.listOfN(5, genScheduledPayment))
       val actor = system.actorOf(Props(new PaymentRepository(repo)))
 

@@ -1,4 +1,4 @@
-@(postUrl: Call)(implicit flash: Flash)
+@(postUrl: Call)(implicit request: Request[AnyContent], flash: Flash)
 
 <!DOCTYPE html>
 <html lang="en">
@@ -29,6 +29,7 @@
         </section>
 
         @helper.form(postUrl, 'id -> "login-form") {
+            @helper.CSRF.formField
             <div class="mdc-text-field mdc-text-field--box username">
                 <input type="text" class="mdc-text-field__input" id="username-input" name="username">
                 <label class="mdc-floating-label" for="username-input">Username</label>

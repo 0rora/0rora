@@ -2,7 +2,7 @@ package controllers
 
 import javax.inject._
 import models.Payment
-import models.repo.PaymentRepo
+import models.db.PaymentDao
 import org.pac4j.core.profile.CommonProfile
 import org.pac4j.play.scala.{Security, SecurityComponents}
 import play.api.libs.functional.syntax._
@@ -11,7 +11,7 @@ import play.api.mvc._
 
 @Singleton
 class PaymentsController @Inject()(val controllerComponents: SecurityComponents,
-                                   paymentRepo: PaymentRepo) extends BaseController with Security[CommonProfile] {
+                                   paymentRepo: PaymentDao) extends BaseController with Security[CommonProfile] {
 
 
   private val stroopsInLumen = 10000000.0

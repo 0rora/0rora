@@ -10,25 +10,24 @@ import org.pac4j.sql.profile.service.DbProfileService
 import play.api.http.HttpVerbs._
 import play.api.mvc._
 
-/**
- * This controller creates an `Action` to handle HTTP requests to the
- * application's home page.
- */
 @Singleton
 class HomeController @Inject()(val controllerComponents: SecurityComponents,
                                authenticator: DbProfileService) extends Security[CommonProfile] {
 
-  // todo - Creation of first user is to be handled differently.
-  if (Option(authenticator.findById("admin")).isEmpty) {
-    val p = new DbProfile()
-    p.setId("admin")
-    p.addAttribute(Pac4jConstants.USERNAME, "admin")
-    authenticator.create(p, "admin")
-  }
-
   def login(): Action[AnyContent] = Action { implicit req =>
+
+    // TODO (jem): Creation of first user is to be handled differently.
+    // $COVERAGE-OFF$
+    if (Option(authenticator.findById("admin")).isEmpty) {
+      val p = new DbProfile()
+      p.setId("admin")
+      p.addAttribute(Pac4jConstants.USERNAME, "admin")
+      authenticator.create(p, "admin")
+    }
+    // $COVERAGE-ON$
+
     val formClient = config.getClients.findClient("FormClient").asInstanceOf[FormClient]
-    val call = Call(GET, formClient.getCallbackUrl)
+    val call = Call(POST, formClient.getCallbackUrl)
     Ok(views.html.login(call))
   }
 }
