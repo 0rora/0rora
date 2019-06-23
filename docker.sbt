@@ -6,9 +6,9 @@ dockerCommands := Seq(
   Cmd("WORKDIR", "/opt/docker"),
   Cmd("ADD", "--chown=daemon:daemon opt /opt"),
   Cmd("USER", "daemon"),
-  Cmd("EXPOSE", "9000"),
   ExecCmd("ENTRYPOINT", "/opt/docker/bin/0rora")
 )
 
 dockerUsername := Some("synesso")
 dockerUpdateLatest := true
+dockerExposedPorts += 9000
