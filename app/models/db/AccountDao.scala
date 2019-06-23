@@ -1,5 +1,7 @@
 package models.db
 
+import java.sql.SQLException
+
 import javax.inject.Inject
 import org.pac4j.play.store.DataEncrypter
 import scalikejdbc.{DBSession, _}
@@ -8,6 +10,7 @@ import stellar.sdk.{KeyPair, PublicKey}
 @javax.inject.Singleton
 class AccountDao @Inject()()(implicit val session: DBSession, encrypter: DataEncrypter) {
 
+  @throws(classOf[SQLException])
   def insert(kp: KeyPair): Unit = {
     sql"insert into accounts (id, seed) values (${kp.accountId}, ${encrypter.encrypt(kp.secretSeed.map(_.toByte))})".
       update().apply()

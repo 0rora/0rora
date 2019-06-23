@@ -31,8 +31,8 @@ class AdminController @Inject()(val controllerComponents: SecurityComponents,
               Try(accountDao.insert(kp)) match {
                 case Success(_) => Ok(Json.toJson(Map("account" -> kp.accountId)))
                 case Failure(t: SQLException) if t.getSQLState == DuplicateKeyViolationCode =>
-                  BadRequest(Json.toJson(Map("failure" -> "The account already exists.")))
-                case Failure(t) => InternalServerError(t.getMessage)
+                  BadRequest(Json.toJson(Map("failure" -> "The account already exists in the database.")))
+                case Failure(t) => InternalServerError(Json.toJson(Map("error" -> t.getMessage)))
               }
             }.recover { case _ =>
               BadRequest(Json.toJson(Map("failure" -> "The account does not exist.")))
