@@ -17,12 +17,14 @@ class HomeController @Inject()(val controllerComponents: SecurityComponents,
   def login(): Action[AnyContent] = Action { implicit req =>
 
     // TODO (jem): Creation of first user is to be handled differently.
+    // $COVERAGE-OFF$
     if (Option(authenticator.findById("admin")).isEmpty) {
       val p = new DbProfile()
       p.setId("admin")
       p.addAttribute(Pac4jConstants.USERNAME, "admin")
       authenticator.create(p, "admin")
     }
+    // $COVERAGE-ON$
 
     val formClient = config.getClients.findClient("FormClient").asInstanceOf[FormClient]
     val call = Call(POST, formClient.getCallbackUrl)
